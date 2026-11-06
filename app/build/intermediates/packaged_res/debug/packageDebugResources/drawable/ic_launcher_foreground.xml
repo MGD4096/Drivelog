@@ -1,0 +1,19 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- A winding road from a start dot to a map pin, inside the 66dp safe zone of an adaptive icon -->
+    <path
+        android:pathData="M32,76C32,62 50,66 54,56C58,46 40,44 46,34C49,29 56,28 62,31"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#29B6F6"
+        android:pathData="M32,71A5,5 0 1,1 32,81A5,5 0 0,1 32,71Z" />
+    <path
+        android:fillColor="#FFB74D"
+        android:fillType="evenOdd"
+        android:pathData="M70,26C64.5,26 60,30.5 60,36C60,43.5 70,56 70,56S80,43.5 80,36C80,30.5 75.5,26 70,26ZM70,40A4,4 0 1,1 70,32A4,4 0 0,1 70,40Z" />
+</vector>

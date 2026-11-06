@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Weather picture "moon". Drawn as one filled shape and tinted in code. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M19.5,14.6 A8.2,8.2 0 1 1 9.4,4.5 A6.6,6.6 0 0 0 19.5,14.6 Z" />
+</vector>

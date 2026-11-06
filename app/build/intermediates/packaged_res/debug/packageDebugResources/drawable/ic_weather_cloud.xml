@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Weather picture "cloud". Drawn as one filled shape and tinted in code. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M4.12,13.95 A4.18,4.18 0 1 1 12.48,13.95 A4.18,4.18 0 1 1 4.12,13.95 Z M8.3,11.2 A5.28,5.28 0 1 1 18.86,11.2 A5.28,5.28 0 1 1 8.3,11.2 Z M14.79,14.28 A3.74,3.74 0 1 1 22.27,14.28 A3.74,3.74 0 1 1 14.79,14.28 Z M8.3,13.95 H18.53 V18.13 H8.3 Z" />
+</vector>
