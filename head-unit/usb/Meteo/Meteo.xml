@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pluginApps>
+  <pluginApp applicationType="Custom" applicationWeight="200" entryButtonFocusID="32763" insertStateID="50" text="Meteo">
+    <comment>Meteo v6 compilato - pagina aggiornata da sola dall'app del telefono</comment>
+    <entryButton action="5" id="1" model="3" imageModel="4" previewModel="13">
+      <properties/>
+    </entryButton>
+    <actions>
+      <hmiAction id="5" target="10"/>
+    </actions>
+    <models>
+      <textIdModel id="3" textId="1">
+        <synonyms/>
+      </textIdModel>
+      <imageIdModel id="4" imageId="57001"/>
+      <raImageModel id="12"/>
+      <raPreviewModel id="13" modelType="StatePreview" previewState="10"/>
+    </models>
+    <events/>
+    <hmiStates>
+      <hmiState id="10" text="Meteo" textModel="3">
+        <properties>
+          <property id="24" value="3"/>
+        </properties>
+        <components>
+          <image id="70" model="12">
+            <properties>
+              <property id="3" value="true"/>
+              <property id="9" value="1280"/>
+              <property id="10" value="480"/>
+              <property id="20" value="0"/>
+              <property id="21" value="0"/>
+            </properties>
+          </image>
+        </components>
+      </hmiState>
+    </hmiStates>
+  </pluginApp>
+</pluginApps>

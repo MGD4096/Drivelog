@@ -1,0 +1,13 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+*.apk
+*.aab
+.DS_Store
+
+# head-unit plugin: build output, and the head unit's own libraries (not redistributable)
+head-unit/plugin/out/
+head-unit/plugin/link/*.A.so
+head-unit/usb/Meteo/libMeteo.so

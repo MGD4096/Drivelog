@@ -1,0 +1,6 @@
+The files in this folder (head-unit/) are, apart from the changes listed in README.md, the "Meteo" plugin of
+iDrive Plus, and they are used and passed on under the PolyForm Noncommercial License 1.0.0 (see LICENSE.md in this
+folder, or https://polyformproject.org/licenses/noncommercial/1.0.0). Personal and other noncommercial use only.
+
+Required Notice: Copyright (c) 2026 DeathWalkeR - iDrive Plus (https://github.com/deathwalker80/idrive-plus)
+Required Notice: Copyright (c) 2026 nanaisu - NBT-AAD (https://github.com/Sq00ky/Supra-iDrive6-Android-Auto)

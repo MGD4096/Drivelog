@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<plugin>
+	<name>Meteo</name>
+	<type>App</type>
+	<file>{pluginDir}/Meteo</file>
+	<config>
+		<autoStart>yes</autoStart>
+		<dependencies>
+			<pluginAppConnector>
+				<type>Etch</type>
+				<id>212</id>
+				<asyncCallbacks>yes</asyncCallbacks>
+			</pluginAppConnector>
+		</dependencies>
+		<parameters>
+			<DescFile>{pluginDir}/Meteo.xml</DescFile>
+			<TextDBFile>{pluginDir}/Meteo_ALL_Texts.zip</TextDBFile>
+			<ImageDBFile>{pluginDir}/Meteo_ALL_Images.zip</ImageDBFile>
+		</parameters>
+	</config>
+</plugin>

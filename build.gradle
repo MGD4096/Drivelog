@@ -1,0 +1,6 @@
+// Versions match the project this one is modelled on (AGP 8.7.3 needs Gradle 8.9 or newer).
+plugins {
+    id 'com.android.application' version '8.7.3' apply false
+    id 'org.jetbrains.kotlin.android' version '1.9.25' apply false
+    id 'org.jetbrains.kotlin.jvm' version '1.9.25' apply false
+}

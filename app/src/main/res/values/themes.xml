@@ -1,0 +1,6 @@
+<resources>
+    <!-- The theme in the manifest; every screen then sets the light or dark one itself (see Colors.prepare). -->
+    <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar" />
+    <style name="AppTheme.Light" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar" />
+    <style name="AppTheme.Dark" parent="@android:style/Theme.DeviceDefault.NoActionBar" />
+</resources>

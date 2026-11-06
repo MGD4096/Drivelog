@@ -1,0 +1,4 @@
+<resources>
+    <!-- On a phone in night mode the window is dark from the first frame (no white flash while the app starts). -->
+    <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar" />
+</resources>
