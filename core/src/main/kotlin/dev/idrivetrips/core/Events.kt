@@ -192,6 +192,17 @@ class FileCarEventsStore(private val file: File) {
         if (all.remove(address.lowercase(Locale.ROOT)) != null) write(all)
     }
 
+    /** Gives the events of [from] to [to] (for a car whose Bluetooth device was changed). */
+    @Synchronized
+    @Throws(IOException::class)
+    fun moveCar(from: String, to: String) {
+        val all = readAll()
+        val moved = all.remove(from.lowercase(Locale.ROOT)) ?: return
+        val key = to.lowercase(Locale.ROOT)
+        all[key] = all[key].orEmpty() + moved
+        write(all)
+    }
+
     private fun readAll(): LinkedHashMap<String, List<CarEvent>> {
         val out = LinkedHashMap<String, List<CarEvent>>()
         val text = try { if (file.isFile) file.readText() else null } catch (e: IOException) { null } ?: return out

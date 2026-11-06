@@ -1,86 +1,82 @@
 [
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_weather_snow.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_weather_snow.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_weather_snow.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_weather_snow.xml"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_launcher_foreground.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_launcher_foreground.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable-nodpi_car_top.png.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable-nodpi/car_top.png"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_service_insurance.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_service_insurance.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_weather_fog.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_weather_fog.xml"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_stat_trip.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_stat_trip.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_weather_cloud_sun.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_weather_cloud_sun.xml"
+    },
+    {
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_weather_rain.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_weather_rain.xml"
     },
     {
         "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_launcher_foreground.xml.flat",
         "source": "dev.idrivetrips.app-main-6:/drawable/ic_launcher_foreground.xml"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_service_inspection.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_service_inspection.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_weather_cloud.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_weather_cloud.xml"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable-nodpi_car_top.png.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable-nodpi\\car_top.png"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_tab_settings.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_tab_settings.xml"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_tab_settings.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_tab_settings.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_stat_trip.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_stat_trip.xml"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_tab_trips.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_tab_trips.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_service_insurance.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_service_insurance.xml"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_weather_cloud_sun.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_weather_cloud_sun.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_weather_storm.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_weather_storm.xml"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_weather_rain.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_weather_rain.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_service_inspection.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_service_inspection.xml"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_weather_sun.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_weather_sun.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_weather_sun.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_weather_sun.xml"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_tab_cars.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_tab_cars.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_service_oil.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_service_oil.xml"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_weather_cloud.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_weather_cloud.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_tab_cars.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_tab_cars.xml"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_service_oil.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_service_oil.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_weather_moon.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_weather_moon.xml"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_weather_storm.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_weather_storm.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_service_repair.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_service_repair.xml"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_weather_fog.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_weather_fog.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_tab_trips.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_tab_trips.xml"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\mipmap-anydpi-v26_ic_launcher.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\mipmap-anydpi-v26\\ic_launcher.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/mipmap-anydpi-v26/ic_launcher.xml"
     },
     {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_service_other.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_service_other.xml"
-    },
-    {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_weather_moon.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_weather_moon.xml"
-    },
-    {
-        "merged": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-debug-4:\\drawable_ic_service_repair.xml.flat",
-        "source": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-main-6:\\drawable\\ic_service_repair.xml"
+        "merged": "dev.idrivetrips.app-debug-4:/drawable_ic_service_other.xml.flat",
+        "source": "dev.idrivetrips.app-main-6:/drawable/ic_service_other.xml"
     }
 ]

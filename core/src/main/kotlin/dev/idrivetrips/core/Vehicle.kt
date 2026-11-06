@@ -338,6 +338,16 @@ class FileCarDetailsStore(private val file: File) {
     @Throws(IOException::class)
     fun remove(address: String) = put(address, CarDetails())
 
+    /** Gives the details of [from] to [to] (for a car whose Bluetooth device was changed). */
+    @Synchronized
+    @Throws(IOException::class)
+    fun moveCar(from: String, to: String) {
+        val map = LinkedHashMap(all())
+        val d = map.remove(from.lowercase(Locale.ROOT)) ?: return
+        map[to.lowercase(Locale.ROOT)] = d
+        write(map)
+    }
+
     private fun write(map: Map<String, CarDetails>) {
         val json = Json.stringify(
             map.mapValues { (_, d) ->

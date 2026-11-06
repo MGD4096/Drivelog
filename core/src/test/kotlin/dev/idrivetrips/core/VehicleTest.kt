@@ -156,6 +156,17 @@ class CarDetailsStoreTest {
     }
 
     @Test
+    fun detailsMoveToAnotherBluetoothDevice() {
+        val store = FileCarDetailsStore(File(dir, "cars.json"))
+        store.put("AA:01", full)
+        store.put("BB:02", CarDetails(model = "Mini"))
+        store.moveCar("aa:01", "CC:03")
+        assertTrue(store.get("AA:01").isEmpty)
+        assertEquals(full, store.get("cc:03"))
+        assertEquals("Mini", store.get("BB:02").model)
+    }
+
+    @Test
     fun aDamagedFileIsTreatedAsEmpty() {
         val f = File(dir, "cars.json")
         f.writeText("{ not json")

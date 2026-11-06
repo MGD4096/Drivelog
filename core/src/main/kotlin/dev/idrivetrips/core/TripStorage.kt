@@ -204,6 +204,23 @@ class FileTripStore(private val dir: File) {
         File(dir, "$id$TRIP_SUFFIX").delete()
     }
 
+    /**
+     * Moves every trip of the car [oldId] (and its unfinished draft) to [newId] / [newName], for a car whose Bluetooth device
+     * was changed. Returns how many trips were moved.
+     */
+    @Throws(IOException::class)
+    fun reassignCar(oldId: String, newId: String, newName: String): Int {
+        var moved = 0
+        for (meta in list()) {
+            if (!meta.carId.equals(oldId, ignoreCase = true)) continue
+            val trip = load(meta.id) ?: continue
+            save(trip.copy(carId = newId, carName = newName))
+            moved++
+        }
+        loadDraft()?.takeIf { it.carId.equals(oldId, ignoreCase = true) }?.let { saveDraft(it.copy(carId = newId, carName = newName)) }
+        return moved
+    }
+
     fun saveDraft(trip: Trip) = writeAtomically(File(dir, DRAFT), TripJson.toJson(trip))
 
     fun loadDraft(): Trip? {

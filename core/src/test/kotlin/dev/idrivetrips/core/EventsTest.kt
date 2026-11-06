@@ -162,6 +162,17 @@ class FileCarEventsStoreTest {
     }
 
     @Test
+    fun eventsMoveToAnotherBluetoothDevice() {
+        val store = FileCarEventsStore(File(dir, "e.json"))
+        store.save("AA", ev(EventType.REPAIR, "2026-01-01", title = "x", id = "1"))
+        store.save("BB", ev(EventType.REPAIR, "2026-01-01", title = "y", id = "2"))
+        store.moveCar("aa", "CC")
+        assertTrue(store.list("AA").isEmpty())
+        assertEquals(listOf("1"), store.list("cc").map { it.id })
+        assertEquals(listOf("2"), store.list("BB").map { it.id })
+    }
+
+    @Test
     fun damagedEntriesAreSkippedAndDamagedFileIsEmpty() {
         val f = File(dir, "e.json")
         f.writeText("""{"aa":[{"id":"1","type":"NOPE","date":"2026-01-01"},{"id":"2","type":"REPAIR","date":"31.12.2026"},

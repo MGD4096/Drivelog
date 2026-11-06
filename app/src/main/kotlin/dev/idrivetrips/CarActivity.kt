@@ -151,12 +151,14 @@ class CarActivity : Activity() {
             more.setOnClickListener {
                 android.widget.PopupMenu(this@CarActivity, more).apply {
                     menu.add(0, 1, 0, tr("Edit car"))
-                    menu.add(0, 3, 1, if (d.archived) tr("Restore from archive") else tr("Archive car"))
-                    menu.add(0, 2, 2, tr("Remove car"))
+                    menu.add(0, 4, 1, tr("Change Bluetooth device"))
+                    menu.add(0, 3, 2, if (d.archived) tr("Restore from archive") else tr("Archive car"))
+                    menu.add(0, 2, 3, tr("Remove car"))
                     setOnMenuItemClickListener { item ->
                         when (item.itemId) {
                             1 -> editCar(d)
                             2 -> confirmRemove(d)
+                            4 -> changeBluetoothDevice()
                             3 -> {
                                 try {
                                     details.put(address, details.get(address).copy(archived = !d.archived))
@@ -659,7 +661,8 @@ class CarActivity : Activity() {
                 .setItems(CarPlugins.all.map { it.label }.toTypedArray()) { _, which -> pluginIndex = which; showPlugin() }
                 .show()
         }
-        val odometerField = field("", old.manualOdometerKm?.let { String.format(java.util.Locale.ROOT, "%.0f", it) }, InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, 9)
+        val odometerField = field("", kmText(shownOdometer(old)), InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, 9)
+        val odometerAtStart = odometerField.text.toString()
         val pluginBox = labelled(tr("Plugin"), EditText(this).also { it.visibility = View.GONE }, "").apply { addView(pluginPicker) }
         val odometerBox = labelled(tr("Odometer (km); trips are added to it automatically"), odometerField, tr("e.g. 154 000"))
         val hint = ui.body().apply { textSize = 12f; setTextColor(Colors.muted); setPadding(0, ui.dp(6), 0, 0) }
@@ -698,7 +701,7 @@ class CarActivity : Activity() {
         val form = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(ui.dp(20), ui.dp(0), ui.dp(20), ui.dp(8))
-            // The name is the Bluetooth device's name and cannot be changed here: trips are matched by it
+            // The Bluetooth device is changed from the ⋮ menu, not here
             addView(caption(tr("Car")))
             addView(labelled(tr("Make and model"), modelField, tr("e.g. BMW M240i")))
             addView(LinearLayout(this@CarActivity).apply {
@@ -740,7 +743,7 @@ class CarActivity : Activity() {
                     plugin = if (pluginOn) CarPlugins.all[pluginIndex.coerceIn(0, CarPlugins.all.size - 1)].id else old.plugin,
                 )
                 // The typed reading counts as entered now when it was changed here; with a plugin it is left alone
-                if (!pluginOn && odometer.value != updated.manualOdometerKm) updated = updated.withManualOdometer(odometer.value, System.currentTimeMillis())
+                if (!pluginOn && odometerField.text.toString() != odometerAtStart) updated = updated.withManualOdometer(odometer.value, System.currentTimeMillis())
                 details.put(address, updated)
             } catch (e: IOException) {
                 toast(tr("Could not save: {0}", e.message))
@@ -752,9 +755,15 @@ class CarActivity : Activity() {
         }
     }
 
+    /** What the odometer of a car without a plugin shows now: the reading typed in plus the trips recorded since. */
+    private fun shownOdometer(d: CarDetails): Double? = VehicleSummary.of(address, trips).manualOdometerNow(d)
+
+    private fun kmText(km: Double?): String? = km?.let { String.format(java.util.Locale.ROOT, "%.0f", it) }
+
     /** For a car without a plugin: type in the odometer reading now. */
     private fun editOdometer(d: CarDetails) {
-        val input = field(tr("Odometer in km"), d.manualOdometerKm?.let { String.format(java.util.Locale.ROOT, "%.0f", it) }, InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, 9)
+        val input = field(tr("Odometer in km"), kmText(shownOdometer(d)), InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, 9)
+        val shownAtStart = input.text.toString()
         val box = LinearLayout(this).apply { setPadding(ui.dp(20), ui.dp(8), ui.dp(20), ui.dp(8)); addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)) }
         val dialog = AlertDialog.Builder(this)
             .setTitle(tr("Odometer"))
@@ -767,6 +776,7 @@ class CarActivity : Activity() {
             val km = CarInput.parseOdometerKm(input.text.toString())
             input.error = km.error
             if (!km.ok) return@setOnClickListener
+            if (input.text.toString() == shownAtStart) { dialog.dismiss(); return@setOnClickListener }          // untouched: keep the reading and the trips counted on it
             try {
                 details.put(address, details.get(address).withManualOdometer(km.value, System.currentTimeMillis()))
             } catch (e: IOException) {
@@ -775,6 +785,75 @@ class CarActivity : Activity() {
             }
             dialog.dismiss()
             render()
+        }
+    }
+
+    /** Points this car at another paired Bluetooth device (a new radio, a new phone pairing); everything recorded so far moves along. */
+    private fun changeBluetoothDevice() {
+        val car = car ?: return
+        if (AppState.status.phase != Phase.IDLE && AppState.status.carName == car.name) {
+            toast(tr("A trip is being recorded for this car. Change the device after it ends."))
+            return
+        }
+        if (Build.VERSION.SDK_INT >= 31 && checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(android.Manifest.permission.BLUETOOTH_CONNECT), MainActivity.REQ_BASIC)
+            toast(tr("Allow Bluetooth access, then try again."))
+            return
+        }
+        val taken = Prefs.cars(this).map { it.address.lowercase() }.toSet()
+        val devices = try {
+            getSystemService(android.bluetooth.BluetoothManager::class.java)?.adapter?.bondedDevices?.toList()
+        } catch (e: SecurityException) {
+            null
+        }?.filter { it.address.lowercase() !in taken }.orEmpty()
+        if (devices.isEmpty()) {
+            toast(tr("No other paired devices found. Pair the new device in Android's Bluetooth settings first."))
+            return
+        }
+        val labels = devices.map { d -> (try { d.name } catch (e: SecurityException) { null }) ?: d.address }
+        AlertDialog.Builder(this)
+            .setTitle(tr("Which device is this car now?"))
+            .setItems(labels.toTypedArray()) { _, i -> confirmDeviceChange(CarRef(devices[i].address, labels[i])) }
+            .setNegativeButton(tr("Cancel"), null)
+            .show()
+    }
+
+    private fun confirmDeviceChange(target: CarRef) {
+        val old = car ?: return
+        AlertDialog.Builder(this)
+            .setTitle(tr("Use {0} for this car?", target.name))
+            .setMessage(tr("The trips, photos and service log stay with the car. From now on a trip starts when the phone connects to {0}, not to {1}.", target.name, old.name))
+            .setPositiveButton(tr("Change")) { _, _ -> moveCarTo(old, target) }
+            .setNegativeButton(tr("Cancel"), null)
+            .show()
+    }
+
+    private fun moveCarTo(old: CarRef, target: CarRef) {
+        val progress = AlertDialog.Builder(this).setMessage(tr("Moving the history…")).setCancelable(false).show()
+        io.execute {
+            var store: FileTripStore? = null
+            var error: String? = null
+            try {
+                store = FileTripStore(File(filesDir, "trips"))
+                store.reassignCar(old.address, target.address, target.name)
+                details.moveCar(old.address, target.address)
+                events.moveCar(old.address, target.address)
+                Prefs.replaceCar(this, old.address, target)
+            } catch (e: IOException) {
+                error = e.message ?: e.toString()
+                try { store?.reassignCar(target.address, old.address, old.name) } catch (x: IOException) { /* best effort */ }
+            }
+            runOnUiThread {
+                if (isDestroyed) return@runOnUiThread
+                progress.dismiss()
+                if (error != null) {
+                    toast(tr("Could not change the device: {0}", error))
+                } else {
+                    toast(tr("Bluetooth device changed."))
+                    startActivity(Intent(this, CarActivity::class.java).putExtra(EXTRA_ADDRESS, target.address))
+                    finish()
+                }
+            }
         }
     }
 
@@ -973,7 +1052,7 @@ class CarActivity : Activity() {
                 events.save(address, CarEvent(existing?.id ?: CarEvent.newId(), type, date, title, dueSaved, odo.value, next.value, cost.value, note))
                 val car = details.get(address)
                 val km = odo.value
-                if (!car.usesPlugin && km != null && (car.manualOdometerKm == null || km > car.manualOdometerKm!!)) {
+                if (!car.usesPlugin && km != null && (car.manualOdometerKm == null || km > (shownOdometer(car) ?: 0.0))) {
                     details.put(address, car.withManualOdometer(km, System.currentTimeMillis()))
                 }
             } catch (e: IOException) {

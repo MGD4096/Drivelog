@@ -40,6 +40,21 @@ class StorageTest {
     }
 
     @Test
+    fun aCarsTripsMoveToAnotherBluetoothDevice() {
+        val store = FileTripStore(dir)
+        val mine = sampleTrip(carId = "AA:AA", startSec = 0)
+        val other = sampleTrip(carId = "BB:BB", startSec = 3600)
+        store.save(mine)
+        store.save(other)
+        assertEquals(1, store.reassignCar("aa:aa", "CC:CC", "New radio"))
+        assertEquals(listOf("CC:CC", "BB:BB"), store.list().sortedBy { it.startMs }.map { it.carId })
+        val moved = store.load(mine.id)!!
+        assertEquals("New radio", moved.carName)
+        assertEquals(mine.points, moved.points)
+        assertEquals("BB:BB", store.load(other.id)!!.carId)
+    }
+
+    @Test
     fun listIsNewestFirstAndCarriesTheSummary() {
         val store = FileTripStore(dir)
         val older = sampleTrip(startSec = 0)

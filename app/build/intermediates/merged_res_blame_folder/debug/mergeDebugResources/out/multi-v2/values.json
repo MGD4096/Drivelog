@@ -1,46 +1,16 @@
 {
     "logs": [
         {
-            "outputFile": "C:\\Users\\Mateusz\\.gradle\\daemon\\8.9\\dev.idrivetrips.app-mergeDebugResources-2:\\values\\values.xml",
+            "outputFile": "dev.idrivetrips.app-mergeDebugResources-2:/values/values.xml",
             "map": [
                 {
-                    "source": "C:\\Dev\\Android\\idrive-trips1\\idrive-trips\\app\\src\\main\\res\\values\\strings.xml",
+                    "source": "C:\\Dev\\Android\\Drivelog\\Drivelog\\app\\src\\main\\res\\values\\colors.xml",
                     "from": {
-                        "startLines": "-1",
-                        "startColumns": "-1",
-                        "startOffsets": "-1"
-                    },
-                    "to": {
-                        "startLines": "3",
+                        "startLines": "1",
                         "startColumns": "4",
-                        "startOffsets": "103",
-                        "endColumns": "49",
-                        "endOffsets": "148"
-                    }
-                },
-                {
-                    "source": "C:\\Dev\\Android\\idrive-trips1\\idrive-trips\\app\\src\\main\\res\\values\\themes.xml",
-                    "from": {
-                        "startLines": "-1,4,3",
-                        "startColumns": "-1,4,4",
-                        "startOffsets": "-1,320,222",
-                        "endColumns": "-1,90,97",
-                        "endOffsets": "-1,406,315"
-                    },
-                    "to": {
-                        "startLines": "4,5,6",
-                        "startColumns": "4,4,4",
-                        "startOffsets": "153,244,334",
-                        "endColumns": "90,89,96",
-                        "endOffsets": "239,329,426"
-                    }
-                },
-                {
-                    "source": "C:\\Dev\\Android\\idrive-trips1\\idrive-trips\\app\\src\\main\\res\\values\\colors.xml",
-                    "from": {
-                        "startLines": "-1",
-                        "startColumns": "-1",
-                        "startOffsets": "-1"
+                        "startOffsets": "16",
+                        "endColumns": "47",
+                        "endOffsets": "59"
                     },
                     "to": {
                         "startLines": "2",
@@ -49,14 +19,9 @@
                         "endColumns": "47",
                         "endOffsets": "98"
                     }
-                }
-            ]
-        },
-        {
-            "outputFile": "dev.idrivetrips.app-mergeDebugResources-2:/values/values.xml",
-            "map": [
+                },
                 {
-                    "source": "C:\\Dev\\Android\\idrive-trips1\\idrive-trips\\app\\src\\main\\res\\values\\strings.xml",
+                    "source": "C:\\Dev\\Android\\Drivelog\\Drivelog\\app\\src\\main\\res\\values\\strings.xml",
                     "from": {
                         "startLines": "1",
                         "startColumns": "4",
@@ -73,11 +38,13 @@
                     }
                 },
                 {
-                    "source": "C:\\Dev\\Android\\idrive-trips1\\idrive-trips\\app\\src\\main\\res\\values\\themes.xml",
+                    "source": "C:\\Dev\\Android\\Drivelog\\Drivelog\\app\\src\\main\\res\\values\\themes.xml",
                     "from": {
-                        "startLines": "-1,-1,-1",
-                        "startColumns": "-1,-1,-1",
-                        "startOffsets": "-1,-1,-1"
+                        "startLines": "2,4,3",
+                        "startColumns": "4,4,4",
+                        "startOffsets": "130,320,222",
+                        "endColumns": "91,90,97",
+                        "endOffsets": "217,406,315"
                     },
                     "to": {
                         "startLines": "4,5,6",
@@ -85,23 +52,6 @@
                         "startOffsets": "149,240,330",
                         "endColumns": "90,89,96",
                         "endOffsets": "235,325,422"
-                    }
-                },
-                {
-                    "source": "C:\\Dev\\Android\\idrive-trips1\\idrive-trips\\app\\src\\main\\res\\values\\colors.xml",
-                    "from": {
-                        "startLines": "1",
-                        "startColumns": "4",
-                        "startOffsets": "16",
-                        "endColumns": "47",
-                        "endOffsets": "59"
-                    },
-                    "to": {
-                        "startLines": "2",
-                        "startColumns": "4",
-                        "startOffsets": "55",
-                        "endColumns": "47",
-                        "endOffsets": "98"
                     }
                 }
             ]

@@ -27,6 +27,10 @@ object Prefs {
 
     fun addCar(c: Context, car: CarRef) = save(c, cars(c).filter { !it.address.equals(car.address, true) } + car)
 
+    /** Swaps the Bluetooth device of a car, keeping its place in the list. */
+    fun replaceCar(c: Context, oldAddress: String, car: CarRef) =
+        save(c, cars(c).map { if (it.address.equals(oldAddress, true)) car else it })
+
     fun removeCar(c: Context, address: String) = save(c, cars(c).filter { !it.address.equals(address, true) })
 
     /** Replaces the whole list (used when data is imported). */
