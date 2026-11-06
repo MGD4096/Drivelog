@@ -36,6 +36,7 @@ import dev.idrivetrips.core.FileCarDetailsStore
 import dev.idrivetrips.core.FileCarEventsStore
 import dev.idrivetrips.core.FileTripStore
 import dev.idrivetrips.core.LastKnownCar
+import dev.idrivetrips.core.ManualOdometer
 import dev.idrivetrips.core.Parsed
 import dev.idrivetrips.core.Reminders
 import dev.idrivetrips.core.TripMeta
@@ -661,7 +662,7 @@ class CarActivity : Activity() {
                 .setItems(CarPlugins.all.map { it.label }.toTypedArray()) { _, which -> pluginIndex = which; showPlugin() }
                 .show()
         }
-        val odometerField = field("", kmText(shownOdometer(old)), InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, 9)
+        val odometerField = field("", ManualOdometer.shownText(old, VehicleSummary.of(address, trips)), InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, 9)
         val odometerAtStart = odometerField.text.toString()
         val pluginBox = labelled(tr("Plugin"), EditText(this).also { it.visibility = View.GONE }, "").apply { addView(pluginPicker) }
         val odometerBox = labelled(tr("Odometer (km); trips are added to it automatically"), odometerField, tr("e.g. 154 000"))
@@ -743,7 +744,7 @@ class CarActivity : Activity() {
                     plugin = if (pluginOn) CarPlugins.all[pluginIndex.coerceIn(0, CarPlugins.all.size - 1)].id else old.plugin,
                 )
                 // The typed reading counts as entered now when it was changed here; with a plugin it is left alone
-                if (!pluginOn && odometerField.text.toString() != odometerAtStart) updated = updated.withManualOdometer(odometer.value, System.currentTimeMillis())
+                if (!pluginOn) updated = ManualOdometer.afterEdit(updated, odometerAtStart, odometerField.text.toString(), odometer.value, System.currentTimeMillis())
                 details.put(address, updated)
             } catch (e: IOException) {
                 toast(tr("Could not save: {0}", e.message))
@@ -756,13 +757,9 @@ class CarActivity : Activity() {
     }
 
     /** What the odometer of a car without a plugin shows now: the reading typed in plus the trips recorded since. */
-    private fun shownOdometer(d: CarDetails): Double? = VehicleSummary.of(address, trips).manualOdometerNow(d)
-
-    private fun kmText(km: Double?): String? = km?.let { String.format(java.util.Locale.ROOT, "%.0f", it) }
-
     /** For a car without a plugin: type in the odometer reading now. */
     private fun editOdometer(d: CarDetails) {
-        val input = field(tr("Odometer in km"), kmText(shownOdometer(d)), InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, 9)
+        val input = field(tr("Odometer in km"), ManualOdometer.shownText(d, VehicleSummary.of(address, trips)), InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, 9)
         val shownAtStart = input.text.toString()
         val box = LinearLayout(this).apply { setPadding(ui.dp(20), ui.dp(8), ui.dp(20), ui.dp(8)); addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)) }
         val dialog = AlertDialog.Builder(this)
@@ -776,9 +773,8 @@ class CarActivity : Activity() {
             val km = CarInput.parseOdometerKm(input.text.toString())
             input.error = km.error
             if (!km.ok) return@setOnClickListener
-            if (input.text.toString() == shownAtStart) { dialog.dismiss(); return@setOnClickListener }          // untouched: keep the reading and the trips counted on it
             try {
-                details.put(address, details.get(address).withManualOdometer(km.value, System.currentTimeMillis()))
+                details.put(address, ManualOdometer.afterEdit(details.get(address), shownAtStart, input.text.toString(), km.value, System.currentTimeMillis()))
             } catch (e: IOException) {
                 toast(tr("Could not save: {0}", e.message))
                 return@setOnClickListener
@@ -1051,10 +1047,8 @@ class CarActivity : Activity() {
             try {
                 events.save(address, CarEvent(existing?.id ?: CarEvent.newId(), type, date, title, dueSaved, odo.value, next.value, cost.value, note))
                 val car = details.get(address)
-                val km = odo.value
-                if (!car.usesPlugin && km != null && (car.manualOdometerKm == null || km > (shownOdometer(car) ?: 0.0))) {
-                    details.put(address, car.withManualOdometer(km, System.currentTimeMillis()))
-                }
+                val raised = ManualOdometer.afterServiceEntry(car, VehicleSummary.of(address, trips), odo.value, System.currentTimeMillis())
+                if (raised != car) details.put(address, raised)
             } catch (e: IOException) {
                 toast(tr("Could not save: {0}", e.message))
                 return@setOnClickListener
