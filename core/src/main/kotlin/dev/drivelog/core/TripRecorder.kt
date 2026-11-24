@@ -74,6 +74,9 @@ class TripRecorder(
     fun onCar(nowMs: Long, car: CarSnapshot) {
         if (!recording) return
         lastCar = car
+        // The trip starts before the plugin has sent anything: the battery's first reading counts as the start one
+        // (right after standing, which says most about the battery; see CarHealth)
+        if (startCar.batteryPercent == null && car.batteryPercent != null) startCar = startCar.copy(batteryPercent = car.batteryPercent)
         recordSample(nowMs, car)
     }
 

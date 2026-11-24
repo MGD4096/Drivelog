@@ -19,10 +19,12 @@ object CdsProperty {
     const val WINDOW_PASSENGER_FRONT = "controls.windowPassengerFront"
     const val WINDOW_DRIVER_REAR = "controls.windowDriverRear"
     const val WINDOW_PASSENGER_REAR = "controls.windowPassengerRear"
+    const val BATTERY = "sensors.battery"
+    const val TYRE_PRESSURE = "sensors.tirePressureWarning"
 
     val ALL: Set<String> = setOf(
         ODOMETER, FUEL, AVG_CONSUMPTION, TEMP_OUTSIDE, TEMP_INSIDE, DOORS, TRUNK, LID, SUNROOF,
-        WINDOW_DRIVER_FRONT, WINDOW_PASSENGER_FRONT, WINDOW_DRIVER_REAR, WINDOW_PASSENGER_REAR,
+        WINDOW_DRIVER_FRONT, WINDOW_PASSENGER_FRONT, WINDOW_DRIVER_REAR, WINDOW_PASSENGER_REAR, BATTERY, TYRE_PRESSURE,
     )
 }
 
@@ -83,6 +85,8 @@ object CdsParser {
             outsideC = num(obj(CdsProperty.TEMP_OUTSIDE)?.get("temperatureExterior"))?.takeIf { it > -60 && it < 90 },
             insideC = num(obj(CdsProperty.TEMP_INSIDE)?.get("temperatureInterior"))?.takeIf { it > -60 && it < 90 },
             openParts = openParts(::obj),
+            batteryPercent = num(obj(CdsProperty.BATTERY)?.get("battery"))?.takeIf { it > 0 && it <= 100 },
+            tyrePressureWarning = tyreWarning(sub(obj(CdsProperty.TYRE_PRESSURE), "tirePressureWarning")),
         )
     }
 
@@ -90,6 +94,16 @@ object CdsParser {
     private fun sub(o: Map<String, Any?>?, key: String): Map<String, Any?>? = o?.get(key) as? Map<String, Any?>
     private fun num(v: Any?): Double? = (v as? Double)?.takeIf { !it.isNaN() && !it.isInfinite() }
     private fun positive(v: Any?, max: Double): Double? = num(v)?.takeIf { it > 0 && it <= max }
+
+    /**
+     * Tyre pressure warning: `status` 0 = no warning (what a car with good tyres sends), 255 = not valid, anything else
+     * = a warning. The meaning of the individual non-zero codes is not known.
+     */
+    private fun tyreWarning(o: Map<String, Any?>?): Boolean? = when ((o?.get("status") as? Double)?.toInt()) {
+        0 -> false
+        in 1..254 -> true
+        else -> null
+    }
 
     /**
      * Average consumption in km/l. The car reports a `unit`: 4 = km/l, 1 = l/100 km, 2 = mpg (UK), 3 = mpg (US).

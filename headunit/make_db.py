@@ -5,14 +5,14 @@ Texts: one <lang>.txt per HMI language, lines "id=text", ASCII only (the HMI's t
 reliably). 100000 = the language's name, 1 = the menu entry. The ids match src/drivelog_bridge.cpp:
   1000 + state    line 1 (0 starting, 1 no Wi-Fi, 2 waiting for a phone, 3 phone connected, 4 port busy, 5 stopped)
   2000 + n        line 2, phones connected (0..4)
-  3000 + n        line 3, car values received (0..13)
+  3000 + n        line 3, car values received (0..15)
 Image 57101: the 63x54 icon of the menu entry. Run: python3 make_db.py   (or: make db)
 """
 import struct
 import zipfile
 import zlib
 
-PROPS = 13
+PROPS = 15
 LANGS = ["de", "en-UK", "en-US", "es-ES", "es-US", "fr-FR", "fr-CA", "it", "pt", "ru", "pl"]
 LANG_NAMES = {"de": "Deutsch", "en-UK": "English (UK)", "en-US": "English (US)", "es-ES": "Espanol",
               "es-US": "Espanol (US)", "fr-FR": "Francais", "fr-CA": "Francais (CA)", "it": "Italiano",

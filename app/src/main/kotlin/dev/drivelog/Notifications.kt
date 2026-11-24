@@ -27,6 +27,8 @@ object Notifications {
     const val ID_TRIP = 1
     const val ID_RESULT = 2
     const val ID_ALERT = 3
+    const val ID_TYRES = 4
+    const val ID_BATTERY = 5
 
     /** Extras that make MainActivity start a trip when it is opened from the "tap to start" notification. */
     const val EXTRA_START_ADDRESS = "start_address"
@@ -104,6 +106,14 @@ object Notifications {
         }.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         val tap = PendingIntent.getActivity(context, id, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         post(context, id, title, text, tap, CHANNEL_REMINDER)
+    }
+
+    /** Something the car itself reports (tyre pressure, a low battery); tapping it opens the car's screen. */
+    fun carWarning(context: Context, id: Int, title: String, text: String, carAddress: String) {
+        val intent = Intent(context, CarActivity::class.java).putExtra(CarActivity.EXTRA_ADDRESS, carAddress)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val tap = PendingIntent.getActivity(context, id, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        post(context, id, title, text, tap, CHANNEL_ALERT)
     }
 
     private fun post(context: Context, id: Int, title: String, text: String, tap: PendingIntent, channel: String = CHANNEL_ALERT) {

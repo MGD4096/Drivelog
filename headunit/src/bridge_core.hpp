@@ -26,6 +26,8 @@ static const char* const kProperties[] = {
     "controls.windowPassengerFront",
     "controls.windowDriverRear",
     "controls.windowPassengerRear",
+    "sensors.battery",                 // 12 V battery charge, % (85..97 seen; 255 = none)
+    "sensors.tirePressureWarning",     // status 0 = no warning
 };
 enum { kPropertyCount = sizeof(kProperties) / sizeof(kProperties[0]) };
 

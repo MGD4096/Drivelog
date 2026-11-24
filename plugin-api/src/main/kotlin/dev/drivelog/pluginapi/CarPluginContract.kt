@@ -53,6 +53,8 @@ object CarValuesBundle {
     private const val OUTSIDE = "outsideC"
     private const val INSIDE = "insideC"
     private const val OPEN = "openParts"
+    private const val BATTERY = "batteryPercent"
+    private const val TYRES = "tyrePressureWarning"
 
     fun toBundle(v: CarValues): Bundle = Bundle().apply {
         v.odometerKm?.let { putDouble(ODOMETER, it) }
@@ -62,6 +64,8 @@ object CarValuesBundle {
         v.outsideC?.let { putDouble(OUTSIDE, it) }
         v.insideC?.let { putDouble(INSIDE, it) }
         v.openParts?.let { putStringArrayList(OPEN, ArrayList(it)) }
+        v.batteryPercent?.let { putDouble(BATTERY, it) }
+        v.tyrePressureWarning?.let { putBoolean(TYRES, it) }
     }
 
     /** Never throws: a value of the wrong type counts as unknown. The receiver still runs [CarValues.checked]. */
@@ -72,7 +76,17 @@ object CarValuesBundle {
         } catch (e: RuntimeException) {
             null
         }
+        fun flag(key: String): Boolean? = try {
+            // a missing key or another type gives each default back: only a real Boolean gives the same answer twice
+            val a = b.getBoolean(key, false)
+            if (a == b.getBoolean(key, true)) a else null
+        } catch (e: RuntimeException) {
+            null
+        }
         val open = try { b.getStringArrayList(OPEN) } catch (e: RuntimeException) { null }
-        return CarValues(num(ODOMETER), num(FUEL), num(RANGE), num(AVG), num(OUTSIDE), num(INSIDE), open?.filterNotNull())
+        return CarValues(
+            num(ODOMETER), num(FUEL), num(RANGE), num(AVG), num(OUTSIDE), num(INSIDE), open?.filterNotNull(),
+            num(BATTERY), flag(TYRES),
+        )
     }
 }

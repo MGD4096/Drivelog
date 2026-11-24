@@ -36,6 +36,7 @@ import dev.drivelog.core.FileCarDetailsStore
 import dev.drivelog.core.FileCarEventsStore
 import dev.drivelog.core.FileTripStore
 import dev.drivelog.core.LastKnownCar
+import dev.drivelog.core.CarHealth
 import dev.drivelog.core.ManualOdometer
 import dev.drivelog.core.Parsed
 import dev.drivelog.core.Reminders
@@ -66,6 +67,8 @@ class CarActivity : Activity() {
     private var car: CarRef? = null
     private var trips: List<TripMeta> = emptyList()
     private var known: LastKnownCar? = null
+    /** The 12 V battery at the start of the latest trips, oldest first. */
+    private var batteryHistory: List<CarHealth.BatteryReading> = emptyList()
     private var photoCallback: ((List<Uri>) -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -105,10 +108,12 @@ class CarActivity : Activity() {
             val store = try { FileTripStore(File(filesDir, "trips")) } catch (e: IOException) { null }
             val list = try { store?.list() ?: emptyList() } catch (e: Exception) { emptyList() }
             val last = try { store?.let { LastKnownCar.find(address, list, it) } } catch (e: Exception) { null }
+            val battery = try { store?.let { CarHealth.batteryHistory(address, list, it) } } catch (e: Exception) { null }
             runOnUiThread {
                 if (!isDestroyed) {
                     trips = list
                     known = last
+                    batteryHistory = battery.orEmpty()
                     render()
                 }
             }
@@ -610,6 +615,10 @@ class CarActivity : Activity() {
             row(tr("Average consumption"), snap?.avgConsumptionKmPerL?.takeIf { it > 0 }?.let { "${ui.f1(100.0 / it)} L/100 km" })
             row(tr("Outside temperature"), snap?.outsideC?.let { "${ui.f1(it)} °C" })
             row(tr("Inside temperature"), snap?.insideC?.let { "${ui.f1(it)} °C" })
+            val battery = snap?.batteryPercent ?: batteryHistory.lastOrNull()?.percent
+            row(tr("12 V battery"), battery?.let { tr("{0} %", ui.f0(it)) + if (CarHealth.isLow(it)) " · " + tr("low") else "" })
+            row(tr("Battery over the latest trips"), CarHealth.trendText(batteryHistory))
+            row(tr("Tyre pressure"), snap?.tyrePressureWarning?.let { if (it) tr("Warning") else tr("No warning") })
             val doors = widgets.doorsStatus(c, known)
             row(tr("Doors and windows"), if (doors.closed == null) null else doors.text)
             if (snap == null && s.odometerKm == null) form.addView(ui.body().apply { text = tr("No data yet."); textSize = 14f })

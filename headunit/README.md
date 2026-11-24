@@ -1,7 +1,7 @@
 # Drivelog bridge – head-unit plugin (NBT Evo and EntryNav2)
 
 `libDrivelogBridge.so` is an iDrive PluginApp. It runs inside the head unit's HMI (`HmiMain3D`), subscribes to the
-13 car values Drivelog uses and serves them to the phone over the car's Wi-Fi. The phone app Drivelog ID6
+15 car values Drivelog uses and serves them to the phone over the car's Wi-Fi. The phone app Drivelog ID6
 (`plugins/id6/`) connects to it and hands the values to Drivelog; the
 plugin never looks for the phone. **Read only:** it never writes anything to the car.
 
@@ -21,14 +21,15 @@ One source for both head units:
 | Build | `build_nbt.bat` (or `make nbt-dist`) | `bash toolchain/run.sh tc make entrynav2-dist` |
 
 In iDrive it is **ConnectedDrive → DRIVELOG**: a page with three lines – the state (car Wi-Fi off / waiting for the
-phone / phone connected / port busy), how many phones are connected and how many of the 13 values have arrived.
+phone / phone connected / port busy), how many phones are connected and how many of the 15 values have arrived.
 
 ## Car values
 
 `driving.odometer`, `sensors.fuel`, `driving.averageConsumption`, `sensors.temperatureExterior`,
 `sensors.temperatureInterior`, `sensors.doors`, `sensors.trunk`, `sensors.lid`, `controls.sunroof`,
 `controls.windowDriverFront`, `controls.windowPassengerFront`, `controls.windowDriverRear`,
-`controls.windowPassengerRear` – the list in `src/bridge_core.hpp`. A test of the phone plugin (`PluginSourceTest` in
+`controls.windowPassengerRear`, `sensors.battery` (12 V battery, %), `sensors.tirePressureWarning` (`status` 0 = no
+warning) – the list in `src/bridge_core.hpp`. A test of the phone plugin (`PluginSourceTest` in
 `plugins/id6`) fails when it and `CdsProperty.ALL` there differ. None of them is personal data (no GPS, contacts or VIN), so nothing is
 masked.
 

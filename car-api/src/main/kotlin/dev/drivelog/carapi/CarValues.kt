@@ -26,6 +26,10 @@ data class CarValues(
      * valid state.
      */
     val openParts: List<String>? = null,
+    /** Charge of the 12 V battery, %. */
+    val batteryPercent: Double? = null,
+    /** True while the car warns about tyre pressure, false when it reports no warning. */
+    val tyrePressureWarning: Boolean? = null,
 ) {
     /**
      * The same values with everything implausible dropped (another app sends them, so they are not trusted): numbers
@@ -39,6 +43,8 @@ data class CarValues(
         outsideC = outsideC?.takeIf { it > -60 && it < 90 },
         insideC = insideC?.takeIf { it > -60 && it < 90 },
         openParts = openParts?.filter { isPartLabel(it) }?.distinct()?.take(PART_LABELS.size),
+        batteryPercent = batteryPercent.within(0.0, 100.0),
+        tyrePressureWarning = tyrePressureWarning,
     )
 
     companion object {
@@ -64,7 +70,7 @@ data class CarValues(
             linkedMapOf<String, Any?>(
                 "odometerKm" to v.odometerKm, "fuelLiters" to v.fuelLiters, "rangeKm" to v.rangeKm,
                 "avgConsumptionKmPerL" to v.avgConsumptionKmPerL, "outsideC" to v.outsideC, "insideC" to v.insideC,
-                "openParts" to v.openParts,
+                "openParts" to v.openParts, "batteryPercent" to v.batteryPercent, "tyrePressureWarning" to v.tyrePressureWarning,
             ).filterValues { it != null }
         )
 
@@ -76,6 +82,7 @@ data class CarValues(
                 odometerKm = num("odometerKm"), fuelLiters = num("fuelLiters"), rangeKm = num("rangeKm"),
                 avgConsumptionKmPerL = num("avgConsumptionKmPerL"), outsideC = num("outsideC"), insideC = num("insideC"),
                 openParts = (o["openParts"] as? List<*>)?.filterIsInstance<String>(),
+                batteryPercent = num("batteryPercent"), tyrePressureWarning = o["tyrePressureWarning"] as? Boolean,
             )
         }
     }

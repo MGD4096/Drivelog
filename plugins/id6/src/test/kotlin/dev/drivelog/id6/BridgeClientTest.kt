@@ -168,7 +168,7 @@ class PluginSourceTest {
         val start = text.indexOf("kProperties[] = {")
         assertTrue("kProperties list not found", start >= 0)
         val sent = Regex("\"([A-Za-z.]+)\"").findAll(text.substring(start, text.indexOf("};", start))).map { it.groupValues[1] }.toList()
-        assertEquals(13, sent.size)
+        assertEquals(sent.toString(), CdsProperty.ALL.size, sent.size)
         assertEquals(CdsProperty.ALL, sent.toSet())
     }
 

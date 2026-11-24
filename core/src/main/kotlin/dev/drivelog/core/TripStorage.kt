@@ -78,6 +78,8 @@ object TripJson {
         "outsideC" to c.outsideC,
         "insideC" to c.insideC,
         "openParts" to c.openParts,
+        "batteryPercent" to c.batteryPercent,
+        "tyrePressureWarning" to c.tyrePressureWarning,
     )
 
     private fun carFromMap(any: Any?): CarSnapshot {
@@ -90,6 +92,8 @@ object TripJson {
             outsideC = m["outsideC"] as? Double,
             insideC = m["insideC"] as? Double,
             openParts = (m["openParts"] as? List<*>)?.filterIsInstance<String>(),
+            batteryPercent = m["batteryPercent"] as? Double,
+            tyrePressureWarning = m["tyrePressureWarning"] as? Boolean,
         )
     }
 

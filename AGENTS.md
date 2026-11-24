@@ -14,7 +14,7 @@ an iDrive plugin that runs inside the head unit. The maintainer writes in Polish
 | `core/` | Drivelog's logic: trips, recorder, statistics, storage, backup, GPX/CSV, reminders, map maths, weather, texts (`Lang.kt`, `Polish.kt`) | Kotlin/JVM |
 | `app/` | Drivelog (`dev.drivelog`): `TripService`, Bluetooth, screens, `CarPluginLink.kt` (finds plugins, checks signature, binds) | Android app |
 | `plugins/id6/` | Drivelog ID6 (`dev.drivelog.id6`): `Cds.kt` (BMW CDS formats → `CarValues`), `Bridge.kt` (TCP client of the head-unit plugin), `CarWifi.kt`, `Id6PluginService.kt`, `InfoActivity` (no launcher icon) | Android app |
-| `headunit/` | DrivelogBridge: iDrive PluginApp in C++98 for NBT Evo (QNX 6.5) and EntryNav2 (Linux ARMv7hf); serves 13 CDS values on TCP 7777 as JSON lines | C++ |
+| `headunit/` | DrivelogBridge: iDrive PluginApp in C++98 for NBT Evo (QNX 6.5) and EntryNav2 (Linux ARMv7hf); serves 15 CDS values on TCP 7777 as JSON lines | C++ |
 
 Data path: car CDS → `headunit/` (TCP 7777, JSON lines) → `plugins/id6` (BMW formats → `CarValues`, sent as a
 `Bundle` over AIDL at most once a second, on change) → Drivelog `CarState` → trip recorder / screens.

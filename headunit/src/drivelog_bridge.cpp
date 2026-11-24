@@ -1,6 +1,6 @@
 // libDrivelogBridge.so - iDrive PluginApp that hands the car values Drivelog needs to the phone.
 //
-// It subscribes to the 13 CDS properties of bridge_core.hpp and serves them on a TCP port of the car's Wi-Fi:
+// It subscribes to the 15 CDS properties of bridge_core.hpp and serves them on a TCP port of the car's Wi-Fi:
 // one JSON object per line (hello, snapshot, cds, ping; headunit/README.md). The phone connects; the plugin never
 // looks for it. Read only: nothing is ever written to CDS.
 //
@@ -655,7 +655,8 @@ template <int P> bool onCds(void*, const bmw::BasicString<unsigned short>& v) {
 }
 typedef bool (*CdsStub)(void*, const bmw::BasicString<unsigned short>&);
 const CdsStub kStubs[] = { &onCds<0>, &onCds<1>, &onCds<2>, &onCds<3>, &onCds<4>, &onCds<5>, &onCds<6>,
-                           &onCds<7>, &onCds<8>, &onCds<9>, &onCds<10>, &onCds<11>, &onCds<12> };
+                           &onCds<7>, &onCds<8>, &onCds<9>, &onCds<10>, &onCds<11>, &onCds<12>, &onCds<13>,
+                           &onCds<14> };
 typedef char kOneStubPerProperty[sizeof(kStubs) / sizeof(kStubs[0]) == (size_t)kPropertyCount ? 1 : -1];
 
 // ---- bmw::Runnable stand-in: vtable copied from the framework's, run() is ours -----------------------------------

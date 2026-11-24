@@ -209,7 +209,7 @@ static void testPlugin(const char* libPath, const std::string& dataDir) {
     Reader r(fd);
     std::string hello = r.data(3000);
     CHECK(contains(hello, "{\"type\":\"hello\",\"proto\":1,\"app\":\"drivelog-bridge-0.1.0 EntryNav2\""));
-    CHECK(contains(hello, "\"props\":13}"));
+    CHECK(contains(hello, "\"props\":15}"));
     std::string snap = r.data(3000);
     CHECK(contains(snap, "{\"type\":\"snapshot\",") && contains(snap, "\"values\":{\"driving.odometer\":{\"odometer\":12345}}}"));
 
@@ -268,7 +268,7 @@ static void testPlugin(const char* libPath, const std::string& dataDir) {
 
     std::string log = readFile(dataDir + "/bridge.log");
     CHECK(contains(log, "listening on 127.0.0.1:17777"));
-    CHECK(contains(log, "subscribed 13 CDS properties"));
+    CHECK(contains(log, "subscribed 15 CDS properties"));
     CHECK(contains(log, "CDS sensors.lid: not a JSON object"));
     CHECK(contains(log, "phone 127.0.0.1 refused"));
 

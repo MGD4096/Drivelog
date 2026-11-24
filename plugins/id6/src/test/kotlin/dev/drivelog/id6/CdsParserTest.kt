@@ -145,3 +145,27 @@ class CdsParserTest {
         assertEquals(listOf("sunroof (tilted)"), tilted)
     }
 }
+
+class BatteryAndTyreTest {
+    private fun parse(vararg pairs: Pair<String, String>) = CdsParser.toCarValues(mapOf(*pairs))
+
+    @Test
+    fun batteryPercent() {
+        assertEquals(86.0, parse(CdsProperty.BATTERY to """{"battery":86}""").batteryPercent!!, 0.0)   // as scanned
+        assertNull(parse(CdsProperty.BATTERY to """{"battery":255}""").batteryPercent)                  // first value: none
+        assertNull(parse(CdsProperty.BATTERY to """{"battery":0}""").batteryPercent)
+        assertNull(parse().batteryPercent)
+    }
+
+    @Test
+    fun tyrePressureWarning() {
+        fun t(status: String) = parse(CdsProperty.TYRE_PRESSURE to """{"tirePressureWarning":{"status":$status}}""").tyrePressureWarning
+        assertEquals(false, t("0"))                       // as scanned with good tyres
+        assertEquals(true, t("1"))
+        assertEquals(true, t("3"))
+        assertNull(t("255"))
+        assertNull(t("-1"))
+        assertNull(parse(CdsProperty.TYRE_PRESSURE to """{"tirePressureWarning":1}""").tyrePressureWarning)
+        assertNull(parse().tyrePressureWarning)
+    }
+}

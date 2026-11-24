@@ -18,6 +18,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import dev.drivelog.core.CarHealth
 import dev.drivelog.core.CarPlugins
 import dev.drivelog.core.FileCarDetailsStore
 import dev.drivelog.pluginapi.CarPluginContract
@@ -44,6 +45,8 @@ class TripService : Service() {
     private var pluginLink: CarPluginLink? = null
     /** Set when the car uses a plugin that is not installed (or not signed like Drivelog). */
     private var pluginMissing: String? = null
+    /** The tyre pressure warning was notified in this trip. */
+    private var tyreWarned = false
     private var locationManager: LocationManager? = null
     private var locationRegistered = false
     private var gpsProblem: String? = null
@@ -190,6 +193,7 @@ class TripService : Service() {
         running = true
         disconnectedAtMs = 0L
         ticks = 0
+        tyreWarned = false
         startPlugin()
         startLocation()
         registerBluetooth()
@@ -235,6 +239,7 @@ class TripService : Service() {
                     store.save(trip)
                     clearDraft()
                     message = tr("{0}. Saved {1} km.", reason, km(summary.distanceKm))
+                    checkBattery()
                 } catch (e: IOException) {
                     message = tr("{0}, but the trip could not be saved: {1}", reason, e.message)     // the draft stays for a retry
                 }
@@ -250,7 +255,15 @@ class TripService : Service() {
 
     private fun onTick() {
         val now = System.currentTimeMillis()
-        recorder.onCar(now, AppState.car.snapshot())
+        val car = AppState.car.snapshot()
+        recorder.onCar(now, car)
+        if (car.tyrePressureWarning == true && !tyreWarned) {          // once per trip
+            tyreWarned = true
+            Notifications.carWarning(
+                this, Notifications.ID_TYRES, tr("Tyre pressure warning"),
+                tr("{0} reports a tyre pressure warning. Check the tyres.", carName), carAddress,
+            )
+        }
         if (++ticks % DRAFT_EVERY_TICKS == 0) saveDraft()
         val phase = if (disconnectedAtMs != 0L) Phase.WAITING_FOR_RECONNECT else Phase.RECORDING
         publish(phase)
@@ -302,6 +315,18 @@ class TripService : Service() {
             return
         }
         pluginLink = CarPluginLink(this, installed, AppState.car).also { it.connect() }
+    }
+
+    /** After a trip is saved: a notification when the 12 V battery has just dropped below CarHealth.LOW_BATTERY_PERCENT. */
+    private fun checkBattery() {
+        val history = try { CarHealth.batteryHistory(carAddress, store.list(), store) } catch (e: Exception) { return }
+        if (!CarHealth.batteryJustGotLow(history)) return
+        Notifications.carWarning(
+            this, Notifications.ID_BATTERY, tr("12 V battery low"),
+            tr("{0}: the 12 V battery was at {1} % at the start of the trip ({2}). Have it checked or charged.",
+                carName, String.format(Locale.getDefault(), "%.0f", history.last().percent), CarHealth.trendText(history) ?: ""),
+            carAddress,
+        )
     }
 
     private fun stopPlugin() {

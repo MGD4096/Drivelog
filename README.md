@@ -70,6 +70,10 @@ protected by the plugin permission) is offered on the car's page, so the plugin 
   when it has run out. A notification is posted once when an entry comes within the warning time and once more when it
   has run out. The check runs about once a day (Android decides the exact time) and whenever the app is opened. In
   **Settings > Reminders** you can switch notifications off and choose the warning time in days and kilometres.
+* **12 V battery and tyre pressure** (cars with a plugin): the car's page shows the battery's charge, its history over
+  the latest trips (the reading at the start of each trip, e.g. "97 → 95 → 86 %") and whether the car reports a tyre
+  pressure warning. A notification comes once per trip when the car warns about tyre pressure, and once when the
+  battery's start-of-trip charge drops below 75 % (an assumption: healthy cars showed 85–97 % in scans).
 * **Trips:** all recorded trips in one list, newest first, with a one-line banner while a trip is running. Open a trip
   for details, **its route on a map**, **sharing as GPX or CSV**, or delete.
 * **Map in the app:** open a trip and tap **Map**. The route is drawn over OpenStreetMap, coloured by speed (blue slow,
@@ -166,7 +170,7 @@ look first at the status line of a running trip (it names the plugin and its sta
 ## Known limits
 
 * The connection between the head unit and Drivelog ID6 is not authenticated: anyone on the car's Wi-Fi can read
-  the 13 car values, and a device posing as the head unit on a Wi-Fi the phone is on could put wrong numbers in your
+  the 15 car values, and a device posing as the head unit on a Wi-Fi the phone is on could put wrong numbers in your
   log. While a trip runs the plugin tries the gateway of every Wi-Fi the phone is on (port 7777), not only the car's.
 * Plugins must be signed with Drivelog's key. A plugin from someone else cannot be used (on purpose).
 * Car values are only as good as what the car reports with the ignition off or on; invalid values are treated as unknown.

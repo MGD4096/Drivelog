@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CarValuesTest {
-    private val full = CarValues(12345.0, 31.0, 420.0, 14.2, 6.5, 21.0, listOf("driver door", "sunroof (tilted)"))
+    private val full = CarValues(12345.0, 31.0, 420.0, 14.2, 6.5, 21.0, listOf("driver door", "sunroof (tilted)"), 86.0, false)
 
     @Test
     fun plausibleValuesPassUnchanged() {
@@ -17,7 +17,7 @@ class CarValuesTest {
 
     @Test
     fun implausibleValuesBecomeUnknown() {
-        val bad = CarValues(-1.0, 301.0, Double.NaN, 0.5, -70.0, 95.0, listOf("driver door", "rocket hatch", "driver door", "bonnet (tilted)"))
+        val bad = CarValues(-1.0, 301.0, Double.NaN, 0.5, -70.0, 95.0, listOf("driver door", "rocket hatch", "driver door", "bonnet (tilted)"), 255.0, true)
         val c = bad.checked()
         assertNull(c.odometerKm)
         assertNull(c.fuelLiters)
@@ -25,6 +25,8 @@ class CarValuesTest {
         assertNull(c.avgConsumptionKmPerL)
         assertNull(c.outsideC)
         assertNull(c.insideC)
+        assertNull(c.batteryPercent)
+        assertEquals(true, c.tyrePressureWarning)
         assertEquals(listOf("driver door", "bonnet (tilted)"), c.openParts)
         assertNull(CarValues(fuelLiters = 0.0).checked().fuelLiters)                 // zero = no reading
         assertNull(CarValues(odometerKm = Double.POSITIVE_INFINITY).checked().odometerKm)
