@@ -1,0 +1,20 @@
+// The contract between Drivelog and its car plugins, in plain Kotlin/JVM: the neutral car values (CarValues)
+// and the small JSON reader/writer both sides use. No Android code: ./gradlew :car-api:test
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+}

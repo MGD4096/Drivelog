@@ -1,7 +1,8 @@
 package dev.idrivetrips
 
+import dev.idrivetrips.carapi.Json
+
 import android.content.Context
-import dev.idrivetrips.core.Json
 import dev.idrivetrips.core.Lang
 
 /** The settings that live outside the data folder (the list of cars, reminders, language), as one small text for a backup. */

@@ -28,6 +28,7 @@ import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import dev.idrivetrips.pluginapi.CarPluginContract
 import dev.idrivetrips.core.FileTripStore
 import dev.idrivetrips.core.LastKnownCar
 import dev.idrivetrips.core.TripMeta
@@ -484,13 +485,18 @@ class MainActivity : Activity() {
                     append(tr("{0} disconnected. The trip is saved in {1} s unless it reconnects.", s.carName, ((s.reconnectDeadlineMs - now) / 1000).coerceAtLeast(0)))
             }
             if (s.phase != Phase.IDLE) {
-                append(
-                    when {
-                        s.serverRunning -> "\n" + tr("Plugin link: listening on port {0}.", TripService.PORT)
-                        s.serverError != null -> "\n" + tr("Plugin link failed: {0}", s.serverError)
-                        else -> "\n" + tr("Plugin link: starting.")
-                    }
-                )
+                val label = s.pluginLabel
+                when {
+                    s.pluginMissing != null -> append("\n" + tr("Plugin {0} is not installed: no car data.", s.pluginMissing))
+                    label != null -> append(
+                        "\n" + when (s.pluginState) {
+                            CarPluginContract.STATE_CONNECTED -> tr("{0}: connected to {1}.", label, s.pluginText.ifEmpty { "?" })
+                            CarPluginContract.STATE_ERROR -> tr("{0}: the car does not answer ({1}).", label, s.pluginText)
+                            CarPluginContract.STATE_NO_CAR -> tr("{0}: waiting for the car.", label)
+                            else -> tr("{0}: connecting.", label)
+                        }
+                    )
+                }
             }
         }
 

@@ -8,10 +8,11 @@ local.properties
 *.aab
 .DS_Store
 
-# head-unit plugin: build output, and the head unit's own libraries (not redistributable)
-head-unit/plugin/out/
-head-unit/plugin/link/*.A.so
-head-unit/usb/Meteo/libMeteo.so
+# head-unit plugin: build output, and the head unit's own framework libraries (BMW files, never commit them)
+headunit/build/
+headunit/dist/
+headunit/lib/
+*.A.so
 
 # Log/OS Files
 *.log

@@ -1,11 +1,11 @@
-package dev.idrivetrips.core
+package dev.idrivetrips.carapi
 
 /**
  * A tiny JSON reader/writer with no dependencies, so the same code runs on Android and in plain JVM unit tests
  * (Android's org.json is not available in local unit tests).
  *
  * Values are mapped to: Map<String, Any?> (object), List<Any?> (array), String, Double (every number),
- * Boolean and null. Input is limited in nesting depth because /auto values come from the local network.
+ * Boolean and null. Input is limited in nesting depth because some of it comes from the network or another app.
  */
 object Json {
 

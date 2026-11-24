@@ -1,8 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Needed to open the local server socket on port 8765 (nothing is ever sent to the internet). -->
+    <!-- The map tiles and the weather. (The car itself is reached by the car's plugin app, not by Drivelog.) -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Binding car plugin apps (plugin-api): the permission is defined there, "signature" level, so only plugins
+         signed with Drivelog's key can be used; <queries> lets Drivelog see the installed plugins (Android 11+). -->
+    <uses-permission android:name="dev.idrivetrips.permission.CAR_PLUGIN" />
+    <queries>
+        <intent>
+            <action android:name="dev.idrivetrips.CAR_PLUGIN" />
+        </intent>
+        <intent>
+            <action android:name="dev.idrivetrips.CAR_PLUGIN_SETTINGS" />
+        </intent>
+    </queries>
 
     <!-- Reading the list of paired devices, and to be told when the car connects (API 30 and older). -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />

@@ -242,10 +242,19 @@ class PluginSettingTest {
         val d = CarDetails()
         assertTrue(d.usesPlugin)
         assertEquals("bmw", d.plugin)
-        assertEquals(listOf("bmw"), CarPlugins.all.map { it.id })
-        assertTrue(CarPlugins.label("bmw").contains("BMW"))
-        assertEquals("zzz", CarPlugins.label("zzz"))
+        val bmw = CarPlugin("bmw", "Drivelog BMW ID6")
+        assertEquals("Drivelog BMW ID6", CarPlugins.label("bmw", listOf(bmw)))
+        assertEquals("zzz", CarPlugins.label("zzz", listOf(bmw)))
         assertTrue("a car that only has defaults is still empty", d.isEmpty)
+    }
+
+    @Test
+    fun thePickerKeepsAChoiceWhosePluginIsNotInstalled() {
+        val a = CarPlugin("obd", "Another plugin")
+        val bmw = CarPlugin("bmw", "Drivelog BMW ID6")
+        assertEquals(listOf(a, bmw), CarPlugins.choices(listOf(bmw, a, bmw), "bmw") { "$it (missing)" })
+        assertEquals(listOf(a, CarPlugin("bmw", "bmw (missing)")), CarPlugins.choices(listOf(a), "bmw") { "$it (missing)" })
+        assertEquals(emptyList<CarPlugin>(), CarPlugins.choices(emptyList(), null) { it })
     }
 
     @Test

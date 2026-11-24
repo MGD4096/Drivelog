@@ -1,5 +1,7 @@
 package dev.idrivetrips.core
 
+import dev.idrivetrips.carapi.Json
+
 import java.io.File
 import java.io.IOException
 import java.nio.file.AtomicMoveNotSupportedException
@@ -72,14 +74,27 @@ data class CarDetails(
     }
 }
 
-/** A head-unit plugin the app can receive car values from. */
+/**
+ * A car plugin: a separate app on the phone that delivers car values (plugin-api). [id] is what a car's details
+ * store; [label] is the plugin's own name. Found at run time among the installed apps.
+ */
 data class CarPlugin(val id: String, val label: String)
 
 object CarPlugins {
+    /** The id of "Drivelog BMW ID6". Cars saved before plugins were separate apps all used it. */
     const val DEFAULT = "bmw"
-    val all: List<CarPlugin> = listOf(CarPlugin("bmw", "BMW (iDrive Plus)"))
 
-    fun label(id: String): String = all.firstOrNull { it.id == id }?.label ?: id
+    /**
+     * What the plugin picker offers: the installed plugins, plus the car's current choice when that plugin is not
+     * installed (so editing the car does not silently switch it), marked by [notInstalled].
+     */
+    fun choices(installed: List<CarPlugin>, current: String?, notInstalled: (String) -> String): List<CarPlugin> {
+        val list = installed.distinctBy { it.id }.sortedBy { it.label.lowercase() }
+        if (current == null || list.any { it.id == current }) return list
+        return list + CarPlugin(current, notInstalled(current))
+    }
+
+    fun label(id: String, installed: List<CarPlugin>): String = installed.firstOrNull { it.id == id }?.label ?: id
 }
 
 /** The outcome of reading a text field: the value (null when left empty), or a message for the person when it is wrong. */

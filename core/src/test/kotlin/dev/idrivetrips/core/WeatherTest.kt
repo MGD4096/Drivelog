@@ -1,5 +1,7 @@
 package dev.idrivetrips.core
 
+import dev.idrivetrips.carapi.Json
+
 import com.sun.net.httpserver.HttpServer
 import org.junit.After
 import org.junit.Assert.assertEquals

@@ -1,8 +1,10 @@
 package dev.idrivetrips
 
+import dev.idrivetrips.carapi.Json
+
 import android.content.Context
+import dev.idrivetrips.pluginapi.CarPluginContract
 import dev.idrivetrips.core.CarState
-import dev.idrivetrips.core.Json
 import dev.idrivetrips.core.TripSummary
 
 /** A car the user chose from the paired Bluetooth devices. */
@@ -48,8 +50,13 @@ enum class Phase { IDLE, RECORDING, WAITING_FOR_RECONNECT }
 data class ServiceStatus(
     val phase: Phase = Phase.IDLE,
     val carName: String = "",
-    val serverRunning: Boolean = false,
-    val serverError: String? = null,
+    /** The car's plugin app while a trip runs; null when the car uses none (or it is not installed). */
+    val pluginLabel: String? = null,
+    /** The plugin's connection to the car: CarPluginContract.STATE_*, and its text (head unit's name, or why not). */
+    val pluginState: Int = CarPluginContract.STATE_STOPPED,
+    val pluginText: String = "",
+    /** The id of the plugin the car is set to use when that plugin is not installed. */
+    val pluginMissing: String? = null,
     /** Set when GPS cannot be used (permission missing, no GPS), so the trip has no track. */
     val gpsProblem: String? = null,
     val lastFixMs: Long = 0L,

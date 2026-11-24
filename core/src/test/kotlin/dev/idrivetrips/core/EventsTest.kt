@@ -369,17 +369,8 @@ class LastKnownCarTest {
         val parts = OpenPartsText.parts(listOf("driver door", "rear passenger window", "sunroof (tilted)", "something new"))
         assertEquals(listOf(OpenPart(CarPart.DRIVER_DOOR, false), OpenPart(CarPart.REAR_PASSENGER_WINDOW, false), OpenPart(CarPart.SUNROOF, true)), parts)
         assertTrue(OpenPartsText.parts(null).isEmpty())
-        // every label the parser of the car data can produce is known here
-        val raw = mapOf(
-            "sensors.doors" to """{"doors":{"driver":1,"passenger":1,"driverRear":1,"passengerRear":1}}""",
-            "sensors.trunk" to """{"trunk":1}""", "sensors.lid" to """{"lid":1}""",
-            "controls.windowDriverFront" to """{"windowDriverFront":{"status":2,"position":50}}""",
-            "controls.windowPassengerFront" to """{"windowPassengerFront":{"status":2,"position":50}}""",
-            "controls.windowDriverRear" to """{"windowDriverRear":{"status":2,"position":50}}""",
-            "controls.windowPassengerRear" to """{"windowPassengerRear":{"status":2,"position":50}}""",
-            "controls.sunroof" to """{"sunroof":{"status":2,"position":50}}""",
-        )
-        val labels = CarSnapshot.fromRaw(raw).openParts!!
+        // every label a plugin may send (the contract's list) is known here
+        val labels = dev.idrivetrips.carapi.CarValues.PART_LABELS
         assertEquals(labels.toString(), CarPart.values().size, OpenPartsText.parts(labels).size)
     }
 

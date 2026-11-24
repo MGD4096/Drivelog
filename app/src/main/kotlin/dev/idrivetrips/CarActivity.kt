@@ -595,7 +595,14 @@ class CarActivity : Activity() {
                 else -> tr("Nothing received yet: it appears after the first trip with the plugin")
             }
             form.addView(ui.body().apply { text = source; textSize = 12f; setTextColor(Colors.muted); setPadding(0, 0, 0, ui.dp(4)) })
-            row(tr("Plugin"), CarPlugins.all.firstOrNull { it.id == d.plugin }?.label)
+            val plugin = CarPluginRegistry.installed(this).firstOrNull { it.plugin.id == d.plugin }
+            row(tr("Plugin"), plugin?.plugin?.label ?: tr("{0} (not installed)", d.plugin))
+            // The plugin has no icon of its own: its screen (state of the car connection) is opened from here
+            plugin?.let { p -> CarPluginRegistry.settingsIntent(this, p) }?.let { intent ->
+                form.addView(ui.button(tr("Open {0}", plugin.plugin.label)) {
+                    try { startActivity(intent) } catch (e: RuntimeException) { toast(tr("Could not open: {0}", e.message)) }
+                })
+            }
             val odo = (snap?.odometerKm ?: s.odometerKm)
             row(tr("Odometer"), odo?.let { tr("{0} km", ui.km(it)) })
             row(tr("Fuel in tank"), snap?.fuelLiters?.let { "${ui.f0(it)} L" })
@@ -646,7 +653,10 @@ class CarActivity : Activity() {
         )
 
         var pluginOn = old.usesPlugin
-        var pluginIndex = CarPlugins.all.indexOfFirst { it.id == old.plugin }.coerceAtLeast(0)
+        // The plugin apps on the phone, plus the car's current choice if that one is not installed (kept, marked)
+        val installedPlugins = CarPluginRegistry.plugins(this)
+        val plugins = CarPlugins.choices(installedPlugins, old.plugin) { tr("{0} (not installed)", it) }
+        var pluginIndex = plugins.indexOfFirst { it.id == old.plugin }.coerceAtLeast(0)
         val pluginPicker = ui.body().apply {
             textSize = 16f
             setTextColor(Colors.text)
@@ -654,13 +664,13 @@ class CarActivity : Activity() {
             background = rounded(grey)
             isClickable = true
         }
-        fun showPlugin() { pluginPicker.text = "${CarPlugins.all[pluginIndex].label}   ▾" }
+        fun showPlugin() { pluginPicker.text = "${plugins[pluginIndex].label}   ▾" }
         showPlugin()
         pluginPicker.setOnClickListener {
-            AlertDialog.Builder(this@CarActivity)
-                .setTitle(tr("Plugin"))
-                .setItems(CarPlugins.all.map { it.label }.toTypedArray()) { _, which -> pluginIndex = which; showPlugin() }
-                .show()
+            val dialog = AlertDialog.Builder(this@CarActivity).setTitle(tr("Plugin"))
+            if (installedPlugins.isEmpty()) dialog.setMessage(tr("No plugin app is installed. Install Drivelog BMW ID6 (or another plugin) and come back."))
+            else dialog.setItems(plugins.map { it.label }.toTypedArray()) { _, which -> pluginIndex = which; showPlugin() }
+            dialog.show()
         }
         val odometerField = field("", ManualOdometer.shownText(old, VehicleSummary.of(address, trips)), InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, 9)
         val odometerAtStart = odometerField.text.toString()
@@ -741,7 +751,7 @@ class CarActivity : Activity() {
                 var updated = details.get(address).copy(
                     vin = vin.value, model = modelField.text.toString().trim().ifEmpty { null }, year = year.value, engineCc = engine.value,
                     usesPlugin = pluginOn,
-                    plugin = if (pluginOn) CarPlugins.all[pluginIndex.coerceIn(0, CarPlugins.all.size - 1)].id else old.plugin,
+                    plugin = if (pluginOn) plugins[pluginIndex.coerceIn(0, plugins.size - 1)].id else old.plugin,
                 )
                 // The typed reading counts as entered now when it was changed here; with a plugin it is left alone
                 if (!pluginOn) updated = ManualOdometer.afterEdit(updated, odometerAtStart, odometerField.text.toString(), odometer.value, System.currentTimeMillis())

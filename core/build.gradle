@@ -1,6 +1,7 @@
-// Pure Kotlin/JVM: everything that does not need Android (protocol, car data, trips, export).
+// Pure Kotlin/JVM: everything that does not need Android (car data, trips, storage, export).
 // It runs in plain unit tests: ./gradlew :core:test
 plugins {
+    id 'java-library'
     id 'org.jetbrains.kotlin.jvm'
 }
 
@@ -16,5 +17,6 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
 }
 
 dependencies {
+    api project(':car-api')
     testImplementation 'junit:junit:4.13.2'
 }

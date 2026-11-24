@@ -1,5 +1,7 @@
 package dev.idrivetrips.core
 
+import dev.idrivetrips.carapi.Json
+
 import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection

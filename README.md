@@ -1,33 +1,45 @@
 # Drivelog
 
 An Android app that records your trips together with the data your car reports: odometer, fuel level, range,
-average consumption, temperatures, and which doors, windows or roof are open. It is a small, English, car-data-only
-companion for the iDrive NBT EVO plugin setup from [deathwalker80/idrive-plus](https://github.com/deathwalker80/idrive-plus)
-(MINI F5x/F60, BMW with NBT EVO, Toyota GR Supra). Weather, news, fuel prices and traffic are deliberately left out.
+average consumption, temperatures, and which doors, windows or roof are open. The car values come from a **car
+plugin**: a separate app on the phone. The first one is **Drivelog BMW ID6**, for BMW with an **NBT Evo** or
+**EntryNav2** (EntryEvo) head unit. A car without a plugin works too (odometer typed in by hand). Weather, news, fuel
+prices and traffic from the car are deliberately left out.
 
 ## How it works
 
 ```
- iDrive head unit (NBT EVO)                         Phone
- ┌────────────────────────────┐   car's Wi-Fi    ┌──────────────────────────────┐
- │ "Meteo" plugin from        │   (wireless      │ Drivelog                     │
- │ idrive-plus reads car      │   Android Auto)  │  • HTTP server on port 8765  │
- │ values from the head unit  │ ───────────────► │  • GPS track                 │
- │ and pushes them to the     │  GET /ponte      │  • trip start/stop by the    │
- │ phone                      │  GET /auto?n=…   │    car's Bluetooth           │
- └────────────────────────────┘                  │  • history, GPX/CSV export   │
-                                                 └──────────────────────────────┘
+ BMW head unit (NBT Evo / EntryNav2)        Phone
+ ┌─────────────────────────┐  car's Wi-Fi  ┌──────────────────────┐  binder  ┌──────────────────────────┐
+ │ DrivelogBridge          │  TCP 7777,    │ Drivelog BMW ID6     │  (AIDL,  │ Drivelog                 │
+ │ (iDrive plugin, CDS)    │ ────────────► │ BMW formats ->       │ ───────► │  • trips, GPS track      │
+ │ headunit/               │  JSON lines   │ neutral CarValues    │  Bundle) │  • start/stop by the     │
+ └─────────────────────────┘               │ plugin-bmw-id6/      │          │    car's Bluetooth       │
+                                           └──────────────────────┘          │  • history, GPX/CSV      │
+                                                                             └──────────────────────────┘
 ```
 
-* The **head unit plugin does the reading**. This app only receives. The plugin is in [`head-unit/`](head-unit/README.md):
-  the "Meteo" plugin of iDrive Plus, unmodified, with English install scripts. It needs root SSH on the head unit and
-  wireless Android Auto from [nbt-aad](https://github.com/Sq00ky/Supra-iDrive6-Android-Auto), the same as iDrive Plus.
-  Building or getting `libMeteo.so` and installing it is described there.
-* No AAIdrive, no OBD adapter, no change to the car's control units.
-* The phone must be on the car's Wi-Fi, as it already is with wireless Android Auto.
-* **Do not run this app and the original phone app at the same time.** Both listen on port 8765.
-* In iDrive the plugin shows up as a **Trips** entry in the online services menu. Its page only says that there is
-  nothing to show: this app serves no weather, news or traffic pages. The car data still flows.
+* **Three pieces.** `headunit/` reads the car inside the head unit ([`headunit/README.md`](headunit/README.md)).
+  `plugin-bmw-id6/` is the phone app that connects to it over the car's Wi-Fi and knows everything about BMW's data.
+  Drivelog (`app/`, `core/`) knows nothing about BMW: it only gets neutral values (`car-api/`, [`CarValues`](car-api/src/main/kotlin/dev/idrivetrips/carapi/CarValues.kt)).
+* **Plugins are found, not built in.** A plugin app declares a service with the action `dev.idrivetrips.CAR_PLUGIN`
+  (`plugin-api/`, [`CarPluginContract`](plugin-api/src/main/kotlin/dev/idrivetrips/pluginapi/CarPluginContract.kt)).
+  Once installed it appears in Drivelog under car → **Edit** → **Plugin**. While a trip of that car runs, Drivelog
+  binds the plugin, calls `start`, and gets the car's values (at most once a second, on change) and its state.
+* **Only your own plugins.** The plugin service is protected by a `signature` permission and Drivelog also checks that
+  the plugin is signed with its own key: another app cannot feed values into your log. Both apps are signed with the
+  same (debug) key in this project.
+* No AAIdrive, no OBD adapter, no change to the car's control units. Nothing writes to the car.
+* In iDrive the head-unit part shows up as **DRIVELOG** in the ConnectedDrive menu.
+
+### Writing another plugin
+
+Depend on `:plugin-api`, declare the service as in `CarPluginContract`'s comment, return an `ICarPlugin.Stub` from
+`onBind`, and on `start(sink)` send `CarValuesBundle.toBundle(values)` to `sink.onValues` whenever something changes
+and your state to `sink.onStatus`. Open parts are the labels of `CarValues.PART_LABELS`. Sign it with Drivelog's key.
+Optionally give it a screen: an activity with the action `dev.idrivetrips.CAR_PLUGIN_SETTINGS` (category DEFAULT,
+protected by the plugin permission) is offered on the car's page, so the plugin needs no launcher icon.
+`plugin-bmw-id6/` is the example ([`BmwId6PluginService.kt`](plugin-bmw-id6/src/main/kotlin/dev/idrivetrips/bmwid6/BmwId6PluginService.kt)).
 
 ## What it does
 
@@ -88,63 +100,72 @@ companion for the iDrive NBT EVO plugin setup from [deathwalker80/idrive-plus](h
 
 ## Set it up
 
-**In the car (once):** put the plugin on the head unit, see [`head-unit/README.md`](head-unit/README.md).
+**In the car (once):** build and install the head-unit plugin, see [`headunit/README.md`](headunit/README.md).
 
 **On the phone:**
 
-1. Install the app, open it.
-2. **Allow location, Bluetooth, notifications**, then **Allow location all the time**.
+1. Install **Drivelog** and **Drivelog BMW ID6** (both APKs from the build below; they must be signed with the same
+   key). The plugin has no icon of its own: its screen (the car connection, whether Drivelog is installed) opens from
+   the car's page in Drivelog, **Open Drivelog BMW ID6**. On Android 10+ the launcher may still show a stand-in icon
+   for it that only leads to Android's app info: Android does that for every app without an icon that asks for
+   permissions (the plugin needs network access).
+2. Open Drivelog. **Allow location, Bluetooth, notifications**, then **Allow location all the time**.
 3. **Battery: set to unrestricted.** Android 12+ does not let an app start a foreground service from the background
    because of a Bluetooth event; apps the user has exempted from battery optimisation are allowed. Without this the
    app falls back to a notification, and one tap on it starts the trip.
 4. Pair the phone with the car in Android's Bluetooth settings, then **Add a paired Bluetooth device** and pick the car.
-5. Drive. You can also use **Start trip now** to try it without Bluetooth.
+5. Open the car → **Edit** → plugin on, **Drivelog BMW ID6**. (Cars set up before plugins were separate apps already
+   point to it.)
+6. Drive. The phone must be on the car's Wi-Fi, as it is with wireless Android Auto. You can also use **Start trip
+   now** to try it without Bluetooth.
 
 ## Build
 
-Android Studio (or JDK 17+ and the Android SDK, platform 35):
+Android Studio (or JDK 17–21 and the Android SDK, platform 35; Kotlin 1.9 does not run on JDK 25):
 
 ```
-./gradlew :core:test            # the unit tests: protocol, car data, trips, storage, export
-./gradlew :app:assembleDebug    # the APK
+./gradlew :car-api:test :core:test :plugin-bmw-id6:testDebugUnitTest   # all unit tests
+./gradlew :app:assembleDebug :plugin-bmw-id6:assembleDebug             # Drivelog and Drivelog BMW ID6
+bash headunit/toolchain/check.sh                                       # the head-unit part, ARM under qemu (Docker)
 ```
 
-* `core/` is plain Kotlin/JVM with no Android code: JSON, car-data parsing, the plugin protocol and HTTP server, trip
-  recording and statistics, file storage, GPX/CSV. This is where the logic is, and it is unit-tested.
-* `app/` is the thin Android layer: the service, the Bluetooth receiver, notifications, the screen and file sharing. It
-  uses no libraries beyond the Android framework.
-* Versions follow the idrive-plus project (AGP 8.7.3, Kotlin 1.9.25, Gradle 8.9). Bump them if Android Studio asks.
+| Module | What | Android? |
+|---|---|---|
+| `car-api/` | the neutral car values (`CarValues`) and the JSON reader/writer | no |
+| `plugin-api/` | AIDL (`ICarPlugin`, `ICarDataSink`), `CarPluginContract`, `CarValuesBundle`, the signature permission | library |
+| `core/` | trips, statistics, storage, GPX/CSV, texts: Drivelog's logic, unit-tested | no |
+| `app/` | Drivelog: service, Bluetooth, plugin discovery and binding (`CarPluginLink.kt`), screens | app `dev.idrivetrips` |
+| `plugin-bmw-id6/` | Drivelog BMW ID6: BMW's CDS formats (`Cds.kt`), the head-unit connection (`Bridge.kt`, `CarWifi.kt`), the plugin service | app `dev.idrivetrips.bmwid6` |
+| `headunit/` | DrivelogBridge, the iDrive plugin inside the head unit (C++) | – |
+
+Versions: AGP 8.7.3, Kotlin 1.9.25, Gradle 8.9. Bump them if Android Studio asks.
 
 ## What has and has not been checked
 
 Checked while writing it:
 
-* 193 unit tests of `core` pass, including a simulated 15 km drive in which a fake plugin pushes car values over a real
-  socket, a GPS track is recorded, saved, read back and exported.
-* **The real plugin against the real server.** `PluginHostTest` builds the unmodified plugin source for the PC against
-  a stand-in for the iDrive framework and runs it against this project's server: the plugin finds the phone, gets the
-  handshake, pushes the values it is fed, none is refused, and all are sent again after an app restart. `PluginSourceTest`
-  checks that the property list in the plugin source is exactly the list the app accepts. (Both need `clang++`; the
-  host test also needs port 8765 free, and skips itself otherwise.)
-* The plugin source compiles for ARM, and the install and remove scripts were run against a fake directory tree.
-* `core` also compiles at the Kotlin 1.9 language level (which the Gradle files use).
-* The map maths (projection, camera, gestures' zoom-around-a-point, tile selection, speed colours) and the tile
-  download and cache (against a local test server: User-Agent, 404 and non-image answers not cached, old tile used
-  when offline, size limit) are unit-tested.
-* The Android layer type-checks against the Android 34 API, and the manifest and resources are consistent.
+* All unit tests pass: `car-api` (neutral values, checks, JSON), `core` (including a simulated 15 km drive fed with
+  neutral values: recorded, saved, read back, exported) and `plugin-bmw-id6` (BMW formats -> neutral values, the
+  head-unit connection against a stand-in over a real socket: snapshot, changes, reconnect, silence, refusal;
+  `PluginSourceTest`: the property list and port are exactly the head-unit plugin's).
+* Both APKs build; the merged manifests carry the plugin action, meta-data, `<queries>` and the signature permission.
+* **The head-unit part**, built with the EntryNav2 compiler, passes its host test under qemu, links against the
+  EntryNav2 framework libraries, and every framework symbol it uses is exported by both the EntryNav2 and the NBT Evo
+  libraries. Details and open points: [`headunit/README.md`](headunit/README.md).
+* The map maths and the tile download and cache are unit-tested.
 
-**Not checked:** how the map *looks* and feels on a phone (drawing, gestures, loading of real OpenStreetMap tiles; the
-sandbox has no access to the tile server), a real Gradle/AGP build, an installed APK, a real phone, `libMeteo.so` itself (it needs your head
-unit's libraries) and anything on a real head unit. The protocol was taken from the iDrive Plus source and now also
-confirmed by running that source, but never against a real car. The riskiest part on the phone is Android's
-background-start rules (step 3 above); expect to tune that on your phone. If anything misbehaves, the first things to
-look at are the **Car data** and **Permissions** sections of the screen: they show whether values are arriving and which
-permission is missing.
+**Not checked:** the two apps installed on a real phone (finding the plugin, binding it, values arriving, the plugin's
+process being restarted), how the map *looks* and feels, the NBT Evo build of the head-unit part (needs QNX SDP 6.5)
+and anything in a real car, including the plugin finding the head unit on the car's Wi-Fi. The riskiest part on the
+phone is Android's background-start rules (step 3 above); expect to tune that on your phone. If anything misbehaves,
+look first at the status line of a running trip (it names the plugin and its state) and at the plugin's own screen.
 
 ## Known limits
 
-* While a trip runs, the server accepts car values from any device on a private network, including your home Wi-Fi.
-  The worst a stranger can do is put wrong numbers in your log. It never answers the public internet.
+* The connection between the head unit and Drivelog BMW ID6 is not authenticated: anyone on the car's Wi-Fi can read
+  the 13 car values, and a device posing as the head unit on a Wi-Fi the phone is on could put wrong numbers in your
+  log. While a trip runs the plugin tries the gateway of every Wi-Fi the phone is on (port 7777), not only the car's.
+* Plugins must be signed with Drivelog's key. A plugin from someone else cannot be used (on purpose).
 * Car values are only as good as what the car reports with the ignition off or on; invalid values are treated as unknown.
 * **Map tiles come from OpenStreetMap's own server**, as its [tile usage policy](https://operations.osmfoundation.org/policies/tiles/)
   allows for light personal use: the app identifies itself with its own User-Agent, caches tiles for 7 days and shows
@@ -159,12 +180,11 @@ permission is missing.
 
 ## Credits and licence
 
-* **`head-unit/`** is the "Meteo" plugin of [iDrive Plus](https://github.com/deathwalker80/idrive-plus) by DeathWalkeR,
-  which builds on [nbt-aad](https://github.com/Sq00ky/Supra-iDrive6-Android-Auto), copied with the changes listed in
-  `head-unit/README.md`. It is under the **PolyForm Noncommercial License 1.0.0** (`head-unit/LICENSE.md`,
-  `head-unit/NOTICE.txt`): personal and other noncommercial use only. Keep those two files with it.
-* **Everything else** (`core/`, `app/`) is independent code. The plugin protocol and the car-data property names were
-  learned from reading iDrive Plus; no code from its phone app was used. This part has no licence file yet; add one
-  before you publish it, and note that a project that includes `head-unit/` stays noncommercial.
+* **`headunit/`** is written for this project. How an iDrive PluginApp is loaded and which framework calls it makes
+  (manifest, `pluginAppInfo`, the vtable slots, the CDS subscription, the Runnable stand-in) follow the documented,
+  car-tested pattern of GaugeApp / CdsScan, which goes back to [nbt-aad](https://github.com/Sq00ky/Supra-iDrive6-Android-Auto)
+  (PolyForm Noncommercial 1.0.0); the BMW framework libraries are not included and must not be published.
+* **`car-api/`, `plugin-api/`, `core/`, `app/`, `plugin-bmw-id6/`** are independent code. The car-data property names
+  come from the head unit's CDS. The project has no licence file yet; add one before you publish it.
 
 Not affiliated with BMW, MINI or Toyota. The plugin runs inside the head unit's software: use it at your own risk.

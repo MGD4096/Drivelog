@@ -18,8 +18,9 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import dev.idrivetrips.core.BridgeHttpServer
-import dev.idrivetrips.core.BridgeProtocol
+import dev.idrivetrips.core.CarPlugins
+import dev.idrivetrips.core.FileCarDetailsStore
+import dev.idrivetrips.pluginapi.CarPluginContract
 import dev.idrivetrips.core.FileTripStore
 import dev.idrivetrips.core.TripRecorder
 import dev.idrivetrips.core.TripStats
@@ -29,9 +30,9 @@ import java.util.Locale
 
 /**
  * Records one trip. It runs from the moment the car connects until it disconnects (plus a short grace period), and
- * while it runs it also serves the local HTTP page that the head-unit plugin pushes car data to.
+ * while it runs it is bound to the car's plugin app (if the car uses one), which sends the car data.
  *
- * Everything here runs on the main thread except the HTTP server's own worker threads, which only touch
+ * Everything here runs on the main thread except the plugin's calls (binder threads), which only touch
  * [AppState.car] (thread-safe). The recorder and the store are used from the main thread only.
  */
 class TripService : Service() {
@@ -40,8 +41,9 @@ class TripService : Service() {
     private val recorder = TripRecorder()
     private lateinit var store: FileTripStore
 
-    private var server: BridgeHttpServer? = null
-    private var serverError: String? = null
+    private var pluginLink: CarPluginLink? = null
+    /** Set when the car uses a plugin that is not installed (or not signed like Drivelog). */
+    private var pluginMissing: String? = null
     private var locationManager: LocationManager? = null
     private var locationRegistered = false
     private var gpsProblem: String? = null
@@ -151,7 +153,7 @@ class TripService : Service() {
         if (running) saveDraft()          // killed while recording: the draft is recovered on the next start
         stopLocation()
         unregisterBluetooth()
-        stopServer()
+        stopPlugin()
         running = false
         AppState.status = ServiceStatus(message = AppState.status.message)
         super.onDestroy()
@@ -188,7 +190,7 @@ class TripService : Service() {
         running = true
         disconnectedAtMs = 0L
         ticks = 0
-        startServer()
+        startPlugin()
         startLocation()
         registerBluetooth()
         handler.removeCallbacks(tick)
@@ -220,7 +222,7 @@ class TripService : Service() {
         running = false
         stopLocation()
         unregisterBluetooth()
-        stopServer()
+        stopPlugin()
 
         var message = "$reason."
         if (trip != null) {
@@ -248,7 +250,6 @@ class TripService : Service() {
 
     private fun onTick() {
         val now = System.currentTimeMillis()
-        if (server == null) startServer()                  // for example the port was busy the first time
         recorder.onCar(now, AppState.car.snapshot())
         if (++ticks % DRAFT_EVERY_TICKS == 0) saveDraft()
         val phase = if (disconnectedAtMs != 0L) Phase.WAITING_FOR_RECONNECT else Phase.RECORDING
@@ -270,8 +271,10 @@ class TripService : Service() {
         AppState.status = ServiceStatus(
             phase = phase,
             carName = carName,
-            serverRunning = server != null,
-            serverError = serverError,
+            pluginLabel = pluginLink?.label,
+            pluginState = pluginLink?.state ?: CarPluginContract.STATE_STOPPED,
+            pluginText = pluginLink?.text.orEmpty(),
+            pluginMissing = pluginMissing,
             gpsProblem = gpsProblem,
             lastFixMs = lastFixMs,
             speedKmh = lastSpeedKmh?.takeIf { now - lastFixMs < 10_000 },
@@ -282,24 +285,29 @@ class TripService : Service() {
 
     // ---- pieces ------------------------------------------------------------------------------------------------------
 
-    private fun startServer() {
-        if (server != null) return
-        val s = BridgeHttpServer(
-            port = PORT,
-            protocol = BridgeProtocol(AppState.car, BuildConfig.VERSION_NAME, System.currentTimeMillis() / 1000),
-        )
-        try {
-            s.start()
-            server = s
-            serverError = null
-        } catch (e: IOException) {
-            serverError = tr("Port {0}: {1}", PORT, e.message)
+    /** Binds the plugin app the car uses (Edit car → plugin) for as long as the trip runs. Nothing for a car without one. */
+    private fun startPlugin() {
+        if (pluginLink != null) return
+        pluginMissing = null
+        val details = try {
+            FileCarDetailsStore(File(filesDir, "cars.json")).get(carAddress)
+        } catch (e: Exception) {
+            null
         }
+        if (details != null && !details.usesPlugin) return
+        val id = details?.plugin ?: CarPlugins.DEFAULT
+        val installed = CarPluginRegistry.installed(this).firstOrNull { it.plugin.id == id }
+        if (installed == null) {
+            pluginMissing = id
+            return
+        }
+        pluginLink = CarPluginLink(this, installed, AppState.car).also { it.connect() }
     }
 
-    private fun stopServer() {
-        server?.stop()
-        server = null
+    private fun stopPlugin() {
+        pluginLink?.disconnect()
+        pluginLink = null
+        pluginMissing = null
     }
 
     private fun startLocation() {
@@ -378,9 +386,6 @@ class TripService : Service() {
         const val ACTION_STOP = "dev.idrivetrips.STOP"
         const val EXTRA_ADDRESS = "address"
         const val EXTRA_NAME = "name"
-
-        /** The port the head-unit plugin looks for the phone on. Fixed by the plugin. */
-        const val PORT = 8765
 
         /** How long to wait for the car to reconnect before the trip is closed. */
         const val GRACE_MS = 90_000L
