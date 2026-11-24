@@ -14,7 +14,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 /**
  * A whole drive without a car: the car plugin delivers neutral car values (as its link does: always the whole
  * reading), GPS fixes arrive, the trip is recorded, saved, read back and exported. How a plugin gets the values from
- * its car is tested in the plugin (plugin-id6).
+ * its car is tested in the plugin (plugins/id6).
  */
 class EndToEndTest {
     private lateinit var dir: File

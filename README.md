@@ -11,16 +11,16 @@ prices and traffic from the car are deliberately left out.
 ```
  BMW head unit (NBT Evo / EntryNav2)        Phone
  ┌─────────────────────────┐  car's Wi-Fi  ┌──────────────────────┐  binder  ┌──────────────────────────┐
- │ DrivelogBridge          │  TCP 7777,    │ Drivelog ID6     │  (AIDL,  │ Drivelog                 │
+ │ DrivelogBridge          │  TCP 7777,    │ Drivelog ID6         │  (AIDL,  │ Drivelog                 │
  │ (iDrive plugin, CDS)    │ ────────────► │ BMW formats ->       │ ───────► │  • trips, GPS track      │
  │ headunit/               │  JSON lines   │ neutral CarValues    │  Bundle) │  • start/stop by the     │
- └─────────────────────────┘               │ plugin-id6/      │          │    car's Bluetooth       │
+ └─────────────────────────┘               │ plugins/id6/         │          │    car's Bluetooth       │
                                            └──────────────────────┘          │  • history, GPX/CSV      │
                                                                              └──────────────────────────┘
 ```
 
 * **Three pieces.** `headunit/` reads the car inside the head unit ([`headunit/README.md`](headunit/README.md)).
-  `plugin-id6/` is the phone app that connects to it over the car's Wi-Fi and knows everything about BMW's data.
+  `plugins/id6/` is the phone app that connects to it over the car's Wi-Fi and knows everything about BMW's data.
   Drivelog (`app/`, `core/`) knows nothing about BMW: it only gets neutral values (`car-api/`, [`CarValues`](car-api/src/main/kotlin/dev/drivelog/carapi/CarValues.kt)).
 * **Plugins are found, not built in.** A plugin app declares a service with the action `dev.drivelog.CAR_PLUGIN`
   (`plugin-api/`, [`CarPluginContract`](plugin-api/src/main/kotlin/dev/drivelog/pluginapi/CarPluginContract.kt)).
@@ -39,7 +39,7 @@ Depend on `:plugin-api`, declare the service as in `CarPluginContract`'s comment
 and your state to `sink.onStatus`. Open parts are the labels of `CarValues.PART_LABELS`. Sign it with Drivelog's key.
 Optionally give it a screen: an activity with the action `dev.drivelog.CAR_PLUGIN_SETTINGS` (category DEFAULT,
 protected by the plugin permission) is offered on the car's page, so the plugin needs no launcher icon.
-`plugin-id6/` is the example ([`Id6PluginService.kt`](plugin-id6/src/main/kotlin/dev/drivelog/id6/Id6PluginService.kt)).
+`plugins/id6/` is the example ([`Id6PluginService.kt`](plugins/id6/src/main/kotlin/dev/drivelog/id6/Id6PluginService.kt)).
 
 ## What it does
 
@@ -127,8 +127,8 @@ protected by the plugin permission) is offered on the car's page, so the plugin 
 Android Studio (or JDK 17–21 and the Android SDK, platform 35; Kotlin 1.9 does not run on JDK 25):
 
 ```
-./gradlew :car-api:test :core:test :plugin-id6:testDebugUnitTest   # all unit tests
-./gradlew :app:assembleDebug :plugin-id6:assembleDebug             # Drivelog and Drivelog ID6
+./gradlew :car-api:test :core:test :plugins:id6:testDebugUnitTest   # all unit tests
+./gradlew :app:assembleDebug :plugins:id6:assembleDebug             # Drivelog and Drivelog ID6
 bash headunit/toolchain/check.sh                                       # the head-unit part, ARM under qemu (Docker)
 ```
 
@@ -138,7 +138,7 @@ bash headunit/toolchain/check.sh                                       # the hea
 | `plugin-api/` | AIDL (`ICarPlugin`, `ICarDataSink`), `CarPluginContract`, `CarValuesBundle`, the signature permission | library |
 | `core/` | trips, statistics, storage, GPX/CSV, texts: Drivelog's logic, unit-tested | no |
 | `app/` | Drivelog: service, Bluetooth, plugin discovery and binding (`CarPluginLink.kt`), screens | app `dev.drivelog` |
-| `plugin-id6/` | Drivelog ID6: BMW's CDS formats (`Cds.kt`), the head-unit connection (`Bridge.kt`, `CarWifi.kt`), the plugin service | app `dev.drivelog.id6` |
+| `plugins/id6/` | Drivelog ID6: BMW's CDS formats (`Cds.kt`), the head-unit connection (`Bridge.kt`, `CarWifi.kt`), the plugin service | app `dev.drivelog.id6` |
 | `headunit/` | DrivelogBridge, the iDrive plugin inside the head unit (C++) | – |
 
 Versions: AGP 8.7.3, Kotlin 1.9.25, Gradle 8.9. Bump them if Android Studio asks.
@@ -148,7 +148,7 @@ Versions: AGP 8.7.3, Kotlin 1.9.25, Gradle 8.9. Bump them if Android Studio asks
 Checked while writing it:
 
 * All unit tests pass: `car-api` (neutral values, checks, JSON), `core` (including a simulated 15 km drive fed with
-  neutral values: recorded, saved, read back, exported) and `plugin-id6` (BMW formats -> neutral values, the
+  neutral values: recorded, saved, read back, exported) and `plugins/id6` (BMW formats -> neutral values, the
   head-unit connection against a stand-in over a real socket: snapshot, changes, reconnect, silence, refusal;
   `PluginSourceTest`: the property list and port are exactly the head-unit plugin's).
 * Both APKs build; the merged manifests carry the plugin action, meta-data, `<queries>` and the signature permission.
@@ -187,7 +187,7 @@ look first at the status line of a running trip (it names the plugin and its sta
   (manifest, `pluginAppInfo`, the vtable slots, the CDS subscription, the Runnable stand-in) follow the documented,
   car-tested pattern of GaugeApp / CdsScan, which goes back to [nbt-aad](https://github.com/Sq00ky/Supra-iDrive6-Android-Auto)
   (PolyForm Noncommercial 1.0.0); the BMW framework libraries are not included and must not be published.
-* **`car-api/`, `plugin-api/`, `core/`, `app/`, `plugin-id6/`** are independent code. The car-data property names
+* **`car-api/`, `plugin-api/`, `core/`, `app/`, `plugins/id6/`** are independent code. The car-data property names
   come from the head unit's CDS. The project has no licence file yet; add one before you publish it.
 
 Not affiliated with BMW, MINI or Toyota. The plugin runs inside the head unit's software: use it at your own risk.

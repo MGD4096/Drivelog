@@ -2,7 +2,7 @@
 
 `libDrivelogBridge.so` is an iDrive PluginApp. It runs inside the head unit's HMI (`HmiMain3D`), subscribes to the
 13 car values Drivelog uses and serves them to the phone over the car's Wi-Fi. The phone app Drivelog ID6
-(`plugin-id6/`) connects to it and hands the values to Drivelog; the
+(`plugins/id6/`) connects to it and hands the values to Drivelog; the
 plugin never looks for the phone. **Read only:** it never writes anything to the car.
 
 ```
@@ -29,7 +29,7 @@ phone / phone connected / port busy), how many phones are connected and how many
 `sensors.temperatureInterior`, `sensors.doors`, `sensors.trunk`, `sensors.lid`, `controls.sunroof`,
 `controls.windowDriverFront`, `controls.windowPassengerFront`, `controls.windowDriverRear`,
 `controls.windowPassengerRear` – the list in `src/bridge_core.hpp`. A test of the phone plugin (`PluginSourceTest` in
-`plugin-id6`) fails when it and `CdsProperty.ALL` there differ. None of them is personal data (no GPS, contacts or VIN), so nothing is
+`plugins/id6`) fails when it and `CdsProperty.ALL` there differ. None of them is personal data (no GPS, contacts or VIN), so nothing is
 masked.
 
 ## Protocol (version 1)
@@ -63,7 +63,7 @@ else one with an address in `172.16.224.0/24` (where the iDrive Plus plugin foun
 `169.254.x.x` are never used. The address is checked every 3 s, so the plugin starts listening when the hotspot comes
 up (for example with wireless Android Auto) and follows an address change.
 
-On the phone, the Drivelog ID6 app (`plugin-id6/`) binds its socket to the car's Wi-Fi (that network has no internet, so Android would otherwise
+On the phone, the Drivelog ID6 app (`plugins/id6/`) binds its socket to the car's Wi-Fi (that network has no internet, so Android would otherwise
 use mobile data) and connects to the network's gateway, then the DHCP server, then the first address of the subnet.
 
 ## Settings: `bridge.conf` (optional)
@@ -126,7 +126,7 @@ the library the way the HMI does (`dlsym("pluginAppInfo")`, the vtable slots, `o
 `tests/fake_framework.cpp` – a stand-in that exports the same `bmw::` symbols – feeds CDS values and checks over a real
 TCP connection: hello, snapshot, changes, no repeats, bad values dropped, Polish letters in UTF-8, the queue
 overflowing, ping, a second phone, a third one refused, a phone leaving, the screen texts, `onFinalize`, `app.disable`
-and the crash guard. The phone side of the same lines is tested in `plugin-id6` (`BridgeClientTest`).
+and the crash guard. The phone side of the same lines is tested in `plugins/id6` (`BridgeClientTest`).
 
 ## Install
 

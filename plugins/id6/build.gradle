@@ -1,7 +1,7 @@
 // "Drivelog ID6": a separate app that reads the car values of a car with an NBT Evo or EntryNav2 head unit through the
 // head-unit plugin in headunit/ and hands them to Drivelog in the neutral form of plugin-api.
-//   ./gradlew :plugin-id6:testDebugUnitTest      the CDS logic (plain JVM tests)
-//   ./gradlew :plugin-id6:assembleDebug          the APK
+//   ./gradlew :plugins:id6:testDebugUnitTest      the CDS logic (plain JVM tests)
+//   ./gradlew :plugins:id6:assembleDebug          the APK
 // Drivelog and this app must be signed with the same key (signature permission): both use the debug key here.
 plugins {
     id 'com.android.application'

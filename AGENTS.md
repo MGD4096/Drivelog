@@ -13,10 +13,10 @@ an iDrive plugin that runs inside the head unit. The maintainer writes in Polish
 | `plugin-api/` | the Drivelog ↔ plugin contract: AIDL `ICarPlugin` / `ICarDataSink`, `CarPluginContract` (actions, meta-data keys, states, `API_VERSION`), `CarValuesBundle`, the `signature` permission in its manifest | Android library |
 | `core/` | Drivelog's logic: trips, recorder, statistics, storage, backup, GPX/CSV, reminders, map maths, weather, texts (`Lang.kt`, `Polish.kt`) | Kotlin/JVM |
 | `app/` | Drivelog (`dev.drivelog`): `TripService`, Bluetooth, screens, `CarPluginLink.kt` (finds plugins, checks signature, binds) | Android app |
-| `plugin-id6/` | Drivelog ID6 (`dev.drivelog.id6`): `Cds.kt` (BMW CDS formats → `CarValues`), `Bridge.kt` (TCP client of the head-unit plugin), `CarWifi.kt`, `Id6PluginService.kt`, `InfoActivity` (no launcher icon) | Android app |
+| `plugins/id6/` | Drivelog ID6 (`dev.drivelog.id6`): `Cds.kt` (BMW CDS formats → `CarValues`), `Bridge.kt` (TCP client of the head-unit plugin), `CarWifi.kt`, `Id6PluginService.kt`, `InfoActivity` (no launcher icon) | Android app |
 | `headunit/` | DrivelogBridge: iDrive PluginApp in C++98 for NBT Evo (QNX 6.5) and EntryNav2 (Linux ARMv7hf); serves 13 CDS values on TCP 7777 as JSON lines | C++ |
 
-Data path: car CDS → `headunit/` (TCP 7777, JSON lines) → `plugin-id6` (BMW formats → `CarValues`, sent as a
+Data path: car CDS → `headunit/` (TCP 7777, JSON lines) → `plugins/id6` (BMW formats → `CarValues`, sent as a
 `Bundle` over AIDL at most once a second, on change) → Drivelog `CarState` → trip recorder / screens.
 
 Background knowledge about the head units (CDS property formats, framework ABI, measurements):
@@ -30,8 +30,8 @@ Environment: Windows, PowerShell, Git Bash, Docker Desktop. No Python, g++ or Ja
 - **JDK 21, not 25:** Kotlin 1.9.25 crashes on Android Studio's JBR 25 (`IllegalArgumentException: 25.0.4`).
   `$env:JAVA_HOME = "$env:USERPROFILE\.jdks\jbr-21.0.11"` before `gradlew.bat`.
 - All unit tests (always before finishing a Kotlin change):
-  `.\gradlew.bat :car-api:test :core:test :plugin-id6:testDebugUnitTest`
-- Both APKs: `.\gradlew.bat :app:assembleDebug :plugin-id6:assembleDebug`
+  `.\gradlew.bat :car-api:test :core:test :plugins:id6:testDebugUnitTest`
+- Both APKs: `.\gradlew.bat :app:assembleDebug :plugins:id6:assembleDebug`
 - Head-unit plugin, built for ARM and run under qemu against a fake framework (always after a `headunit/` change):
   `bash headunit/toolchain/check.sh` (Git Bash; uses the Docker images `gauge-entrynav2-tc` / `entrynav2-runner`,
   or `drivelog-*` built from `headunit/toolchain/`).
@@ -43,9 +43,9 @@ Environment: Windows, PowerShell, Git Bash, Docker Desktop. No Python, g++ or Ja
 ## Rules
 
 - **Drivelog knows nothing about the car's make.** Head-unit formats, CDS names and calibration belong in the plugin
-  (`plugin-id6/Cds.kt`). Drivelog only sees `CarValues`.
+  (`plugins/id6/Cds.kt`). Drivelog only sees `CarValues`.
 - **No car maker's name in the code** (identifiers, packages, module names, UI texts, comments): packages are
-  `dev.drivelog.*`, the plugin is `plugin-id6` / `dev.drivelog.id6` / "Drivelog ID6", plugin id `"id6"`. The one
+  `dev.drivelog.*`, the plugin is `plugins/id6` / `dev.drivelog.id6` / "Drivelog ID6", plugin id `"id6"`. The one
   exception is the C++ `namespace bmw` / `bmw::` symbols in `headunit/`: they must match the framework's exported
   (mangled) names. The READMEs may name the cars the plugin works with.
 - **Renames keep old data readable:** backups named `idrive-trips-backup` (before the rename) are still imported
@@ -55,7 +55,7 @@ Environment: Windows, PowerShell, Git Bash, Docker Desktop. No Python, g++ or Ja
   other side cannot ignore, and update both apps. Open parts must be labels of `CarValues.PART_LABELS`; `CarPart`
   in `core/Vehicle.kt` must list exactly the same (`CarStateTest` checks it).
 - **New CDS property:** add it to `kProperties` in `headunit/src/bridge_core.hpp` *and* `CdsProperty` in
-  `plugin-id6/Cds.kt` (`PluginSourceTest` fails when they differ), add a stub to `kStubs` in
+  `plugins/id6/Cds.kt` (`PluginSourceTest` fails when they differ), add a stub to `kStubs` in
   `drivelog_bridge.cpp` (one per property; a compile-time check counts them), the parsing in `CdsParser`, and the
   host test's expectations (`props`, value counts, screen texts in `make_db.py`). No personal data (GPS, contacts, VIN, addresses)
   without the maintainer's explicit decision.
