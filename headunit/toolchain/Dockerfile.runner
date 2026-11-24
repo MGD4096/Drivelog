@@ -1,0 +1,8 @@
+# Runs the ARM host test under qemu-arm and make_db.py.
+#   docker build -t drivelog-runner -f headunit/toolchain/Dockerfile.runner headunit/toolchain
+# (An image entrynav2-runner with the same tools is used instead when it exists: run.sh.)
+FROM ubuntu:24.04
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends qemu-user python3 make \
+ && apt-get clean && rm -rf /var/lib/apt/lists/*
+WORKDIR /work

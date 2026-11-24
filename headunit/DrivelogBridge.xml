@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Drivelog bridge: one entry in the ConnectedDrive menu (applicationType OnlineServices) with a status page of three
+     lines whose texts libDrivelogBridge.so switches (state, phones, car values). Ids differ from GaugeApp (32751/210),
+     CdsScan (32753/212), NBT-AAD and entry-aad, so all of them can be installed side by side.
+     Text ids: make_db.py. Model / action ids: src/drivelog_bridge.cpp. -->
+<pluginApps>
+  <pluginApp applicationType="OnlineServices" applicationWeight="213" entryButtonFocusID="32755" insertAfterFocusID="2270" insertStateID="20" text="DRIVELOG">
+    <comment/>
+    <entryButton action="5" id="1" model="3" imageModel="4">
+      <properties/>
+    </entryButton>
+    <actions>
+      <hmiAction id="5" target="10"/>
+      <raAction id="31"/>
+      <raAction id="32"/>
+      <raAction id="33"/>
+    </actions>
+    <models>
+      <textIdModel id="3" textId="1">
+        <synonyms/>
+      </textIdModel>
+      <imageIdModel id="4" imageId="57101"/>
+      <textIdModel id="41" textId="1000">
+        <synonyms/>
+      </textIdModel>
+      <textIdModel id="42" textId="2000">
+        <synonyms/>
+      </textIdModel>
+      <textIdModel id="43" textId="3000">
+        <synonyms/>
+      </textIdModel>
+    </models>
+    <hmiStates>
+      <hmiState id="10" text="DRIVELOG" textModel="3">
+        <components>
+          <button action="31" id="50" model="41" text="-"/>
+          <button action="32" id="51" model="42" text="-"/>
+          <button action="33" id="52" model="43" text="-"/>
+        </components>
+      </hmiState>
+    </hmiStates>
+  </pluginApp>
+</pluginApps>
