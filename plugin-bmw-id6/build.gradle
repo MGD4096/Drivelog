@@ -1,0 +1,42 @@
+// "Drivelog BMW ID6": a separate app that reads the car values of a BMW with NBT Evo or EntryNav2 through the
+// head-unit plugin in headunit/ and hands them to Drivelog in the neutral form of plugin-api.
+//   ./gradlew :plugin-bmw-id6:testDebugUnitTest      the BMW logic (plain JVM tests)
+//   ./gradlew :plugin-bmw-id6:assembleDebug          the APK
+// Drivelog and this app must be signed with the same key (signature permission): both use the debug key here.
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'dev.idrivetrips.bmwid6'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "dev.idrivetrips.bmwid6"
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation project(':plugin-api')
+    testImplementation 'junit:junit:4.13.2'
+}

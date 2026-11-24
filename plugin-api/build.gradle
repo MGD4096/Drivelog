@@ -1,0 +1,31 @@
+// The link between Drivelog and a car plugin app: the AIDL interfaces, the names both sides look for, the
+// signature permission that keeps other apps out, and CarValues <-> Bundle. Both apps depend on this module.
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'dev.idrivetrips.pluginapi'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    buildFeatures {
+        aidl true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    api project(':car-api')
+}

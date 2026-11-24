@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The connection to the head-unit plugin on the car's Wi-Fi (TCP port 7777). Nothing goes to the internet. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Finding the car's Wi-Fi (it has no internet) so the connection goes through it, not mobile data. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- The info screen shows whether Drivelog is installed. -->
+    <queries>
+        <package android:name="dev.idrivetrips" />
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:label="@string/app_name"
+        android:icon="@android:drawable/ic_menu_compass"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material.Light.DarkActionBar">
+
+        <!-- No launcher icon: the screen is opened from Drivelog (car page, "Open Drivelog BMW ID6"), and only apps
+             signed like this one may open it. On Android 10+ the launcher may still show a stand-in icon that leads
+             to the system's app info, because the app requests permissions. -->
+        <activity
+            android:name=".InfoActivity"
+            android:exported="true"
+            android:permission="dev.idrivetrips.permission.CAR_PLUGIN">
+            <intent-filter>
+                <action android:name="dev.idrivetrips.CAR_PLUGIN_SETTINGS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- What Drivelog looks for (plugin-api, CarPluginContract). Only apps signed like this one may bind. -->
+        <service
+            android:name=".BmwId6PluginService"
+            android:exported="true"
+            android:permission="dev.idrivetrips.permission.CAR_PLUGIN">
+            <intent-filter>
+                <action android:name="dev.idrivetrips.CAR_PLUGIN" />
+            </intent-filter>
+            <meta-data android:name="dev.idrivetrips.plugin.id" android:value="bmw" />
+            <meta-data android:name="dev.idrivetrips.plugin.label" android:value="Drivelog BMW ID6" />
+            <meta-data android:name="dev.idrivetrips.plugin.api" android:value="1" />
+        </service>
+    </application>
+</manifest>

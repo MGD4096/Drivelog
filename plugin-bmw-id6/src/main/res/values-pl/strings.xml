@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="info_text">Plugin do aplikacji Drivelog. Odczytuje przebieg, paliwo, zasięg, średnie spalanie, temperatury oraz otwarte drzwi, okna i dach z BMW z radiem NBT Evo lub EntryNav2, przez wtyczkę DrivelogBridge zainstalowaną w radiu, po Wi-Fi auta.\n\nTu nie ma nic do ustawienia: w Drivelogu otwórz auto, wybierz Edytuj i ustaw plugin Drivelog BMW ID6. Działa, gdy Drivelog nagrywa przejazd.</string>
+    <string name="drivelog_installed">Drivelog: zainstalowany.</string>
+    <string name="drivelog_missing">Drivelog nie jest zainstalowany. Bez niego ten plugin nic nie robi.</string>
+    <string name="state_label">Auto: %1$s</string>
+    <string name="state_stopped">nieużywany (brak przejazdu)</string>
+    <string name="state_no_car">czekam na Wi-Fi auta</string>
+    <string name="state_connecting">łączenie z radiem</string>
+    <string name="state_connected">połączono</string>
+    <string name="state_error">radio nie odpowiada</string>
+    <string name="version_label">Wersja %1$s</string>
+</resources>

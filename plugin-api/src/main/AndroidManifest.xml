@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Merged into Drivelog and into every plugin app. Both define the permission, so it exists whichever is installed
+     first; "signature" means only apps signed with the same key as the one that defined it can hold it. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <permission
+        android:name="dev.idrivetrips.permission.CAR_PLUGIN"
+        android:label="Drivelog car plugin"
+        android:protectionLevel="signature" />
+</manifest>
