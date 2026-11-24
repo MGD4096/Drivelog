@@ -1,6 +1,6 @@
 // Test stand-in for the head unit's libAppFramework.A.so: the bmw:: symbols the plugin calls, with a PluginApp whose
 // vtable has the car's layout (34 slots; onError 21, onInit 22, onFinalize 23). It records what the plugin does.
-// Not BMW's code: only the names and the slot numbers match.
+// Not the head unit's code: only the names and the slot numbers match.
 #ifndef DRIVELOG_FAKE_FRAMEWORK_HPP
 #define DRIVELOG_FAKE_FRAMEWORK_HPP
 #include <map>

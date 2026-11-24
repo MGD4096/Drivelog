@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace 'dev.idrivetrips.pluginapi'
+    namespace 'dev.drivelog.pluginapi'
     compileSdk 35
 
     defaultConfig {

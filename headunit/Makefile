@@ -4,7 +4,7 @@
 #   make db               the two zips (python3)                                 (toolchain/run.sh runner make db)
 #   make test-build       the host test, built for ARM like the car             (toolchain/check.sh runs everything)
 #
-# The car's libAppFramework.A.so / libCoreFramework.A.so are BMW's files, not part of this project (git-ignored):
+# The car's libAppFramework.A.so / libCoreFramework.A.so are the car maker's files, not part of this project (git-ignored):
 #   lib/entrynav2/   from /opt/hmi/lib          lib/nbt/   from /opt/hmi/ID5/lib
 
 NAME        = DrivelogBridge

@@ -2,7 +2,7 @@
 
 An Android app that records your trips together with the data your car reports: odometer, fuel level, range,
 average consumption, temperatures, and which doors, windows or roof are open. The car values come from a **car
-plugin**: a separate app on the phone. The first one is **Drivelog BMW ID6**, for BMW with an **NBT Evo** or
+plugin**: a separate app on the phone. The first one is **Drivelog ID6**, for BMW with an **NBT Evo** or
 **EntryNav2** (EntryEvo) head unit. A car without a plugin works too (odometer typed in by hand). Weather, news, fuel
 prices and traffic from the car are deliberately left out.
 
@@ -11,19 +11,19 @@ prices and traffic from the car are deliberately left out.
 ```
  BMW head unit (NBT Evo / EntryNav2)        Phone
  ┌─────────────────────────┐  car's Wi-Fi  ┌──────────────────────┐  binder  ┌──────────────────────────┐
- │ DrivelogBridge          │  TCP 7777,    │ Drivelog BMW ID6     │  (AIDL,  │ Drivelog                 │
+ │ DrivelogBridge          │  TCP 7777,    │ Drivelog ID6     │  (AIDL,  │ Drivelog                 │
  │ (iDrive plugin, CDS)    │ ────────────► │ BMW formats ->       │ ───────► │  • trips, GPS track      │
  │ headunit/               │  JSON lines   │ neutral CarValues    │  Bundle) │  • start/stop by the     │
- └─────────────────────────┘               │ plugin-bmw-id6/      │          │    car's Bluetooth       │
+ └─────────────────────────┘               │ plugin-id6/      │          │    car's Bluetooth       │
                                            └──────────────────────┘          │  • history, GPX/CSV      │
                                                                              └──────────────────────────┘
 ```
 
 * **Three pieces.** `headunit/` reads the car inside the head unit ([`headunit/README.md`](headunit/README.md)).
-  `plugin-bmw-id6/` is the phone app that connects to it over the car's Wi-Fi and knows everything about BMW's data.
-  Drivelog (`app/`, `core/`) knows nothing about BMW: it only gets neutral values (`car-api/`, [`CarValues`](car-api/src/main/kotlin/dev/idrivetrips/carapi/CarValues.kt)).
-* **Plugins are found, not built in.** A plugin app declares a service with the action `dev.idrivetrips.CAR_PLUGIN`
-  (`plugin-api/`, [`CarPluginContract`](plugin-api/src/main/kotlin/dev/idrivetrips/pluginapi/CarPluginContract.kt)).
+  `plugin-id6/` is the phone app that connects to it over the car's Wi-Fi and knows everything about BMW's data.
+  Drivelog (`app/`, `core/`) knows nothing about BMW: it only gets neutral values (`car-api/`, [`CarValues`](car-api/src/main/kotlin/dev/drivelog/carapi/CarValues.kt)).
+* **Plugins are found, not built in.** A plugin app declares a service with the action `dev.drivelog.CAR_PLUGIN`
+  (`plugin-api/`, [`CarPluginContract`](plugin-api/src/main/kotlin/dev/drivelog/pluginapi/CarPluginContract.kt)).
   Once installed it appears in Drivelog under car → **Edit** → **Plugin**. While a trip of that car runs, Drivelog
   binds the plugin, calls `start`, and gets the car's values (at most once a second, on change) and its state.
 * **Only your own plugins.** The plugin service is protected by a `signature` permission and Drivelog also checks that
@@ -37,9 +37,9 @@ prices and traffic from the car are deliberately left out.
 Depend on `:plugin-api`, declare the service as in `CarPluginContract`'s comment, return an `ICarPlugin.Stub` from
 `onBind`, and on `start(sink)` send `CarValuesBundle.toBundle(values)` to `sink.onValues` whenever something changes
 and your state to `sink.onStatus`. Open parts are the labels of `CarValues.PART_LABELS`. Sign it with Drivelog's key.
-Optionally give it a screen: an activity with the action `dev.idrivetrips.CAR_PLUGIN_SETTINGS` (category DEFAULT,
+Optionally give it a screen: an activity with the action `dev.drivelog.CAR_PLUGIN_SETTINGS` (category DEFAULT,
 protected by the plugin permission) is offered on the car's page, so the plugin needs no launcher icon.
-`plugin-bmw-id6/` is the example ([`BmwId6PluginService.kt`](plugin-bmw-id6/src/main/kotlin/dev/idrivetrips/bmwid6/BmwId6PluginService.kt)).
+`plugin-id6/` is the example ([`Id6PluginService.kt`](plugin-id6/src/main/kotlin/dev/drivelog/id6/Id6PluginService.kt)).
 
 ## What it does
 
@@ -83,8 +83,8 @@ protected by the plugin permission) is offered on the car's page, so the plugin 
 
 ### Exports
 
-* **GPX 1.1**: one `trkpt` per point with `<ele>`, `<time>` and an `<extensions>` block holding `idt:speed` (m/s),
-  `idt:odometer` (km), `idt:fuel` (L) and `idt:outside` (°C).
+* **GPX 1.1**: one `trkpt` per point with `<ele>`, `<time>` and an `<extensions>` block holding `dl:speed` (m/s),
+  `dl:odometer` (km), `dl:fuel` (L) and `dl:outside` (°C).
 * **CSV**: `time_utc,lat,lon,altitude_m,speed_kmh,accuracy_m,odometer_km,fuel_l,outside_c,inside_c`, one row per point.
   Car values carry forward from the latest reading. Decimal point, comma separator, UTC times.
 
@@ -104,17 +104,20 @@ protected by the plugin permission) is offered on the car's page, so the plugin 
 
 **On the phone:**
 
-1. Install **Drivelog** and **Drivelog BMW ID6** (both APKs from the build below; they must be signed with the same
+1. Install **Drivelog** and **Drivelog ID6** (both APKs from the build below; they must be signed with the same
    key). The plugin has no icon of its own: its screen (the car connection, whether Drivelog is installed) opens from
-   the car's page in Drivelog, **Open Drivelog BMW ID6**. On Android 10+ the launcher may still show a stand-in icon
+   the car's page in Drivelog, **Open Drivelog ID6**. On Android 10+ the launcher may still show a stand-in icon
    for it that only leads to Android's app info: Android does that for every app without an icon that asks for
    permissions (the plugin needs network access).
+   **Coming from an earlier build** (package `dev.idrivetrips`, called "idrive-trips")? It is a different app for
+   Android now: export a backup there (*Settings > Data*), install this one, import the backup, then uninstall the
+   old one. Old backups are read as they are.
 2. Open Drivelog. **Allow location, Bluetooth, notifications**, then **Allow location all the time**.
 3. **Battery: set to unrestricted.** Android 12+ does not let an app start a foreground service from the background
    because of a Bluetooth event; apps the user has exempted from battery optimisation are allowed. Without this the
    app falls back to a notification, and one tap on it starts the trip.
 4. Pair the phone with the car in Android's Bluetooth settings, then **Add a paired Bluetooth device** and pick the car.
-5. Open the car → **Edit** → plugin on, **Drivelog BMW ID6**. (Cars set up before plugins were separate apps already
+5. Open the car → **Edit** → plugin on, **Drivelog ID6**. (Cars set up before plugins were separate apps already
    point to it.)
 6. Drive. The phone must be on the car's Wi-Fi, as it is with wireless Android Auto. You can also use **Start trip
    now** to try it without Bluetooth.
@@ -124,8 +127,8 @@ protected by the plugin permission) is offered on the car's page, so the plugin 
 Android Studio (or JDK 17–21 and the Android SDK, platform 35; Kotlin 1.9 does not run on JDK 25):
 
 ```
-./gradlew :car-api:test :core:test :plugin-bmw-id6:testDebugUnitTest   # all unit tests
-./gradlew :app:assembleDebug :plugin-bmw-id6:assembleDebug             # Drivelog and Drivelog BMW ID6
+./gradlew :car-api:test :core:test :plugin-id6:testDebugUnitTest   # all unit tests
+./gradlew :app:assembleDebug :plugin-id6:assembleDebug             # Drivelog and Drivelog ID6
 bash headunit/toolchain/check.sh                                       # the head-unit part, ARM under qemu (Docker)
 ```
 
@@ -134,8 +137,8 @@ bash headunit/toolchain/check.sh                                       # the hea
 | `car-api/` | the neutral car values (`CarValues`) and the JSON reader/writer | no |
 | `plugin-api/` | AIDL (`ICarPlugin`, `ICarDataSink`), `CarPluginContract`, `CarValuesBundle`, the signature permission | library |
 | `core/` | trips, statistics, storage, GPX/CSV, texts: Drivelog's logic, unit-tested | no |
-| `app/` | Drivelog: service, Bluetooth, plugin discovery and binding (`CarPluginLink.kt`), screens | app `dev.idrivetrips` |
-| `plugin-bmw-id6/` | Drivelog BMW ID6: BMW's CDS formats (`Cds.kt`), the head-unit connection (`Bridge.kt`, `CarWifi.kt`), the plugin service | app `dev.idrivetrips.bmwid6` |
+| `app/` | Drivelog: service, Bluetooth, plugin discovery and binding (`CarPluginLink.kt`), screens | app `dev.drivelog` |
+| `plugin-id6/` | Drivelog ID6: BMW's CDS formats (`Cds.kt`), the head-unit connection (`Bridge.kt`, `CarWifi.kt`), the plugin service | app `dev.drivelog.id6` |
 | `headunit/` | DrivelogBridge, the iDrive plugin inside the head unit (C++) | – |
 
 Versions: AGP 8.7.3, Kotlin 1.9.25, Gradle 8.9. Bump them if Android Studio asks.
@@ -145,7 +148,7 @@ Versions: AGP 8.7.3, Kotlin 1.9.25, Gradle 8.9. Bump them if Android Studio asks
 Checked while writing it:
 
 * All unit tests pass: `car-api` (neutral values, checks, JSON), `core` (including a simulated 15 km drive fed with
-  neutral values: recorded, saved, read back, exported) and `plugin-bmw-id6` (BMW formats -> neutral values, the
+  neutral values: recorded, saved, read back, exported) and `plugin-id6` (BMW formats -> neutral values, the
   head-unit connection against a stand-in over a real socket: snapshot, changes, reconnect, silence, refusal;
   `PluginSourceTest`: the property list and port are exactly the head-unit plugin's).
 * Both APKs build; the merged manifests carry the plugin action, meta-data, `<queries>` and the signature permission.
@@ -162,7 +165,7 @@ look first at the status line of a running trip (it names the plugin and its sta
 
 ## Known limits
 
-* The connection between the head unit and Drivelog BMW ID6 is not authenticated: anyone on the car's Wi-Fi can read
+* The connection between the head unit and Drivelog ID6 is not authenticated: anyone on the car's Wi-Fi can read
   the 13 car values, and a device posing as the head unit on a Wi-Fi the phone is on could put wrong numbers in your
   log. While a trip runs the plugin tries the gateway of every Wi-Fi the phone is on (port 7777), not only the car's.
 * Plugins must be signed with Drivelog's key. A plugin from someone else cannot be used (on purpose).
@@ -184,7 +187,7 @@ look first at the status line of a running trip (it names the plugin and its sta
   (manifest, `pluginAppInfo`, the vtable slots, the CDS subscription, the Runnable stand-in) follow the documented,
   car-tested pattern of GaugeApp / CdsScan, which goes back to [nbt-aad](https://github.com/Sq00ky/Supra-iDrive6-Android-Auto)
   (PolyForm Noncommercial 1.0.0); the BMW framework libraries are not included and must not be published.
-* **`car-api/`, `plugin-api/`, `core/`, `app/`, `plugin-bmw-id6/`** are independent code. The car-data property names
+* **`car-api/`, `plugin-api/`, `core/`, `app/`, `plugin-id6/`** are independent code. The car-data property names
   come from the head unit's CDS. The project has no licence file yet; add one before you publish it.
 
 Not affiliated with BMW, MINI or Toyota. The plugin runs inside the head unit's software: use it at your own risk.

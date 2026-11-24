@@ -6,13 +6,13 @@
 
     <!-- Binding car plugin apps (plugin-api): the permission is defined there, "signature" level, so only plugins
          signed with Drivelog's key can be used; <queries> lets Drivelog see the installed plugins (Android 11+). -->
-    <uses-permission android:name="dev.idrivetrips.permission.CAR_PLUGIN" />
+    <uses-permission android:name="dev.drivelog.permission.CAR_PLUGIN" />
     <queries>
         <intent>
-            <action android:name="dev.idrivetrips.CAR_PLUGIN" />
+            <action android:name="dev.drivelog.CAR_PLUGIN" />
         </intent>
         <intent>
-            <action android:name="dev.idrivetrips.CAR_PLUGIN_SETTINGS" />
+            <action android:name="dev.drivelog.CAR_PLUGIN_SETTINGS" />
         </intent>
     </queries>
 

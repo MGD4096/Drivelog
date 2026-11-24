@@ -2,7 +2,7 @@
 # Builds the plugin and its host test for ARM (EntryNav2 compiler) and runs the test under qemu-arm.
 #   bash headunit/toolchain/check.sh
 # The test loads the plugin like the HMI does, against tests/fake_framework.cpp, feeds CDS values and talks to it
-# over a real TCP connection on 127.0.0.1. No BMW library is needed.
+# over a real TCP connection on 127.0.0.1. None of the car's libraries is needed.
 set -e
 here="$(cd "$(dirname "$0")/.." && pwd)"
 run="$here/toolchain/run.sh"

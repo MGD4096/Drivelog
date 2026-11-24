@@ -51,8 +51,9 @@
 #define BRIDGE_VERSION "drivelog-bridge-0.1.0 " BRIDGE_TARGET
 
 // ---- the iDrive app framework (libAppFramework.A.so), declared by hand ----------------------------------------------
-// No BMW headers exist. These declarations only have to produce the same mangled names as the exports of both head
-// units' libAppFramework.A.so; the layouts are the ones GaugeApp and CdsScan use on the car.
+// The framework has no public headers. These declarations only have to produce the same mangled names as the
+// exports of both head units' libAppFramework.A.so (so the namespace must keep the framework's own name); the
+// layouts are the ones GaugeApp and CdsScan use on the car.
 namespace bmw {
 class IDispatcher;
 class Bundle;

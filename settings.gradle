@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = 'idrive-trips'
-include ':car-api', ':core', ':app', ':plugin-api', ':plugin-bmw-id6'
+rootProject.name = 'drivelog'
+include ':car-api', ':core', ':app', ':plugin-api', ':plugin-id6'
