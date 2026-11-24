@@ -21,6 +21,7 @@ import android.os.Looper
 import dev.drivelog.core.CarHealth
 import dev.drivelog.core.CarPlugins
 import dev.drivelog.core.FileCarDetailsStore
+import dev.drivelog.core.FileLastReadingStore
 import dev.drivelog.pluginapi.CarPluginContract
 import dev.drivelog.core.FileTripStore
 import dev.drivelog.core.TripRecorder
@@ -47,6 +48,8 @@ class TripService : Service() {
     private var pluginMissing: String? = null
     /** The tyre pressure warning was notified in this trip. */
     private var tyreWarned = false
+    /** The car values saved so far ([FileLastReadingStore]): the time of the delivery saved last. */
+    private var savedReadingMs = 0L
     private var locationManager: LocationManager? = null
     private var locationRegistered = false
     private var gpsProblem: String? = null
@@ -194,6 +197,7 @@ class TripService : Service() {
         disconnectedAtMs = 0L
         ticks = 0
         tyreWarned = false
+        savedReadingMs = 0L
         startPlugin()
         startLocation()
         registerBluetooth()
@@ -223,6 +227,7 @@ class TripService : Service() {
         val endMs = if (disconnectedAtMs != 0L) disconnectedAtMs else now
         recorder.onCar(now, AppState.car.snapshot())
         val trip = recorder.finish(endMs)
+        saveReading()
         running = false
         stopLocation()
         unregisterBluetooth()
@@ -231,6 +236,7 @@ class TripService : Service() {
         var message = "$reason."
         if (trip != null) {
             val summary = TripStats.summarize(trip)
+            rememberParking(summary.endLat, summary.endLon, endMs)
             if (!TripStats.isWorthKeeping(summary)) {
                 message = tr("{0}. The trip was too short and was not saved.", reason)
                 clearDraft()
@@ -257,6 +263,7 @@ class TripService : Service() {
         val now = System.currentTimeMillis()
         val car = AppState.car.snapshot()
         recorder.onCar(now, car)
+        saveReading()
         if (car.tyrePressureWarning == true && !tyreWarned) {          // once per trip
             tyreWarned = true
             Notifications.carWarning(
@@ -315,6 +322,35 @@ class TripService : Service() {
             return
         }
         pluginLink = CarPluginLink(this, installed, AppState.car).also { it.connect() }
+    }
+
+    /**
+     * Saves what the car sent last, whether the trip is kept or not, so the car page shows it after the trip. Only
+     * when something new arrived since the last save (at most every tick).
+     */
+    private fun saveReading() {
+        val at = AppState.car.lastUpdateMillis
+        if (at == 0L || at == savedReadingMs) return
+        try {
+            FileLastReadingStore(File(filesDir, FileLastReadingStore.FILE_NAME)).put(carAddress, AppState.car.snapshot(), at)
+            savedReadingMs = at
+        } catch (e: IOException) {
+            // tried again on the next tick
+        }
+    }
+
+    /**
+     * Where the car was left, also after a trip too short to keep (moving the car a few metres is still moving it).
+     * The car page and the Cars tab show it when it is newer than the end of the latest saved trip.
+     */
+    private fun rememberParking(lat: Double?, lon: Double?, atMs: Long) {
+        if (lat == null || lon == null) return
+        try {
+            val cars = FileCarDetailsStore(File(filesDir, "cars.json"))
+            cars.put(carAddress, cars.get(carAddress).withParked(lat, lon, atMs))
+        } catch (e: Exception) {
+            // the latest saved trip still tells where it is
+        }
     }
 
     /** After a trip is saved: a notification when the 12 V battery has just dropped below CarHealth.LOW_BATTERY_PERCENT. */

@@ -5,9 +5,10 @@
     <string name="drivelog_missing">Drivelog nie jest zainstalowany. Bez niego ten plugin nic nie robi.</string>
     <string name="state_label">Auto: %1$s</string>
     <string name="state_stopped">nieużywany (brak przejazdu)</string>
-    <string name="state_no_car">czekam na Wi-Fi auta</string>
+    <string name="state_no_car">czekam na radio (Wi-Fi auta)</string>
     <string name="state_connecting">łączenie z radiem</string>
     <string name="state_connected">połączono</string>
     <string name="state_error">radio nie odpowiada</string>
+    <string name="diagnostics_label">Szczegóły (po angielsku):</string>
     <string name="version_label">Wersja %1$s</string>
 </resources>

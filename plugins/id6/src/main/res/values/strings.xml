@@ -6,9 +6,10 @@
     <string name="drivelog_missing">Drivelog is not installed. This plugin does nothing without it.</string>
     <string name="state_label">Car: %1$s</string>
     <string name="state_stopped">not in use (no trip running)</string>
-    <string name="state_no_car">waiting for the car\'s Wi-Fi</string>
+    <string name="state_no_car">waiting for the head unit (car\'s Wi-Fi)</string>
     <string name="state_connecting">connecting to the head unit</string>
     <string name="state_connected">connected</string>
     <string name="state_error">the head unit does not answer</string>
+    <string name="diagnostics_label">Details (in English):</string>
     <string name="version_label">Version %1$s</string>
 </resources>

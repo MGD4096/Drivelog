@@ -76,6 +76,28 @@ static void testCore() {
     CHECK(bridge::interfaceScore("wlan0", 0x7F000001UL) == 0);     // loopback
     CHECK(bridge::interfaceScore("wlan0", 0xA9FE0100UL) == 0);     // 169.254.1.0, the service link
     CHECK(bridge::interfaceScore("lo", 0x7F000001UL) == 0);
+
+    CHECK(bridge::parseIPv4("172.16.224.1") == 0xAC10E001UL);
+    CHECK(bridge::parseIPv4("10.0.0.255") == 0x0A0000FFUL);
+    CHECK(bridge::parseIPv4("1.2.3") == 0 && bridge::parseIPv4("1.2.3.256") == 0 && bridge::parseIPv4("a.b.c.d") == 0);
+    const char* arp =
+        "IP address       HW type     Flags       HW address            Mask     Device\n"
+        "172.16.224.23    0x1         0x2         aa:bb:cc:dd:ee:01     *        wlan0\n"
+        "172.16.224.24    0x1         0x0         00:00:00:00:00:00     *        wlan0\n"
+        "169.254.1.1      0x1         0x2         aa:bb:cc:dd:ee:02     *        eth0\n"
+        "172.16.224.25    0x1         0x6         aa:bb:cc:dd:ee:03     *        wlan0\n";
+    unsigned long found[8];
+    CHECK(bridge::parseArpTable(arp, "wlan0", found, 8) == 2 && found[0] == 0xAC10E017UL && found[1] == 0xAC10E019UL);
+    CHECK(bridge::parseArpTable(arp, "", found, 8) == 3);
+    CHECK(bridge::parseArpTable(arp, "wlan0", found, 1) == 1);
+    unsigned long hosts[300];
+    CHECK(bridge::subnetHosts(0xAC10E001UL, 0xFFFFFF00UL, hosts, 300) == 253 && hosts[0] == 0xAC10E002UL && hosts[252] == 0xAC10E0FEUL);
+    CHECK(bridge::subnetHosts(0xC0A80005UL, 0xFFFFFFF8UL, hosts, 300) == 5);       // /29: .1 .. .6 without .5
+    CHECK(bridge::subnetHosts(0x0A000101UL, 0xFFFF0000UL, hosts, 300) == 253 && hosts[0] == 0x0A000102UL);   // /16 -> its /24, without own .1
+    bridge::Config pc;
+    CHECK(pc.phonePort == 7778 && !pc.phoneAddress[0]);
+    bridge::parseConfig("phonePort=0\nphoneAddress=172.16.224.5", pc);
+    CHECK(pc.phonePort == 0 && strcmp(pc.phoneAddress, "172.16.224.5") == 0);
 }
 
 // ---- 2. the plugin ------------------------------------------------------------------------------------------------
@@ -115,6 +137,25 @@ static long nowMs() {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (long)ts.tv_sec * 1000L + ts.tv_nsec / 1000000L;
+}
+
+static int listenOn(unsigned short port) {
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    int one = 1;
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+    struct sockaddr_in a;
+    memset(&a, 0, sizeof(a));
+    a.sin_family = AF_INET;
+    a.sin_port = htons(port);
+    a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (bind(fd, (struct sockaddr*)&a, sizeof(a)) != 0 || listen(fd, 4) != 0) { close(fd); return -1; }
+    return fd;
+}
+
+static int acceptWithin(int lfd, int ms) {
+    struct pollfd p = { lfd, POLLIN, 0 };
+    if (poll(&p, 1, ms) <= 0) return -1;
+    return accept(lfd, NULL, NULL);
 }
 
 static int connectTo(unsigned short port) {
@@ -203,6 +244,26 @@ static void testPlugin(const char* libPath, const std::string& dataDir) {
 
     feed("driving.odometer", "{\"odometer\":12345}");                   // before any phone: goes into the snapshot
 
+    // The plugin calls the phone (wireless Android Auto keeps the car's Wi-Fi to itself): bridge.conf says
+    // phoneAddress=127.0.0.1 phonePort=17778, so it calls this test, which answers like the phone app.
+    {
+        usleep(600000);                                                  // nobody listens yet: the first call is refused
+        int lfd = listenOn(17778);
+        CHECK(lfd >= 0);
+        int pfd = lfd >= 0 ? acceptWithin(lfd, 8000) : -1;
+        CHECK(pfd >= 0);
+        if (pfd >= 0) {
+            Reader pr(pfd);
+            CHECK(contains(pr.data(3000), "\"type\":\"hello\""));
+            std::string first = pr.data(3000);
+            CHECK(contains(first, "\"type\":\"snapshot\""));
+            if (!contains(first, "{\"odometer\":12345}")) CHECK(contains(pr.data(3000), "{\"odometer\":12345}"));
+            close(pfd);
+        }
+        if (lfd >= 0) close(lfd);
+        usleep(700000);                                                  // the plugin notices the phone left
+    }
+
     int fd = connectTo(17777);
     CHECK(fd >= 0);
     if (fd < 0) return;
@@ -269,6 +330,10 @@ static void testPlugin(const char* libPath, const std::string& dataDir) {
     std::string log = readFile(dataDir + "/bridge.log");
     CHECK(contains(log, "listening on 127.0.0.1:17777"));
     CHECK(contains(log, "subscribed 15 CDS properties"));
+    CHECK(contains(log, "calling 1 address(es) (127.0.0.1) from bridge.conf phoneAddress on port 17778"));
+    CHECK(contains(log, "calling 127.0.0.1:17778: Connection refused"));
+    CHECK(contains(log, "phone 127.0.0.1 connected (the plugin called it)"));
+    CHECK(contains(log, "phone 127.0.0.1 connected (it called)"));
     CHECK(contains(log, "CDS sensors.lid: not a JSON object"));
     CHECK(contains(log, "phone 127.0.0.1 refused"));
 

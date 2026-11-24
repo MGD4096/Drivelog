@@ -310,6 +310,8 @@ struct Client {
 Client g_clients[kMaxClients];
 int g_listenFd = -1;
 char g_listenAddr[48] = "";
+char g_listenIface[32] = "";          // interface of g_listenAddr (empty: bridge.conf address=)
+unsigned long g_listenMask = 0;       // its netmask, host order
 int g_wake[2] = { -1, -1 };          // self-pipe: a CDS value or the stop request wakes poll()
 volatile bool g_stop = false;
 pthread_t g_thread;
@@ -388,8 +390,10 @@ void sendSnapshot(Client& c, long now) {
 
 // The address to listen on: bridge.conf address=, else the IPv4 address of interface= or of the best Wi-Fi-looking
 // interface (bridge::interfaceScore). Empty: none (the car's Wi-Fi is off).
-void findListenAddress(char* out, size_t n) {
+void findListenAddress(char* out, size_t n, char* iface, size_t ifaceSize, unsigned long* mask) {
     out[0] = 0;
+    iface[0] = 0;
+    *mask = 0;
     if (g_conf.address[0]) { snprintf(out, n, "%s", g_conf.address); return; }
     struct ifaddrs* list = NULL;
     if (getifaddrs(&list) != 0) return;
@@ -404,12 +408,17 @@ void findListenAddress(char* out, size_t n) {
         if (score > best) {
             best = score;
             inet_ntop(AF_INET, &sin->sin_addr, out, (socklen_t)n);
+            snprintf(iface, ifaceSize, "%s", a->ifa_name);
+            *mask = a->ifa_netmask ? ntohl(reinterpret_cast<const struct sockaddr_in*>(a->ifa_netmask)->sin_addr.s_addr) : 0;
         }
     }
     freeifaddrs(list);
 }
 
+void closeProbes();
+
 void closeListen(const char* why) {
+    closeProbes();
     for (int i = 0; i < kMaxClients; ++i) closeClient(g_clients[i], why);
     if (g_listenFd >= 0) {
         close(g_listenFd);
@@ -442,13 +451,8 @@ int openListen(const char* addr) {
     return kStateListening;
 }
 
-void acceptClient(long now) {
-    struct sockaddr_in peer;
-    socklen_t plen = sizeof(peer);
-    int fd = accept(g_listenFd, reinterpret_cast<struct sockaddr*>(&peer), &plen);
-    if (fd < 0) return;
-    char name[48] = "?";
-    inet_ntop(AF_INET, &peer.sin_addr, name, sizeof(name));
+// A connected phone, whichever side opened the connection ([how] for the log): hello and snapshot go out first.
+void addClient(int fd, const char* name, const char* how, long now) {
     int slot = -1;
     for (int i = 0; i < g_conf.maxClients && i < kMaxClients; ++i) if (g_clients[i].fd < 0) { slot = i; break; }
     if (slot < 0) {
@@ -468,10 +472,190 @@ void acceptClient(long now) {
     c.len = c.cap = 0;
     c.lastSentMs = now;
     snprintf(c.peer, sizeof(c.peer), "%s", name);
-    blog("phone %s connected", name);
+    blog("phone %s connected (%s)", name, how);
     char hello[256];
     int n = bridge::helloLine(hello, sizeof(hello), BRIDGE_VERSION, now);
     if (n > 0 && queueBytes(c, hello, (size_t)n)) sendSnapshot(c, now);
+}
+
+void acceptClient(long now) {
+    struct sockaddr_in peer;
+    socklen_t plen = sizeof(peer);
+    int fd = accept(g_listenFd, reinterpret_cast<struct sockaddr*>(&peer), &plen);
+    if (fd < 0) return;
+    char name[48] = "?";
+    inet_ntop(AF_INET, &peer.sin_addr, name, sizeof(name));
+    addClient(fd, name, "it called", now);
+}
+
+// ---- calling the phones -------------------------------------------------------------------------------------------
+// While no phone is connected the plugin itself connects to port phonePort of the phones on its Wi-Fi (see
+// bridge_core.hpp, "finding phones"): a few at a time, non-blocking, each given kProbeTimeoutMs; a full round at most
+// every kCallEveryMs. The first one that answers becomes a client like one that called in.
+enum { kMaxProbes = 24, kMaxCandidates = 254 };
+const long kProbeTimeoutMs = 1500;
+const long kCallEveryMs = 5000;
+
+struct Probe { int fd; unsigned long ip; long startMs; };
+Probe g_probes[kMaxProbes];
+unsigned long g_cand[kMaxCandidates];
+int g_candCount = 0, g_candNext = 0;
+long g_roundDoneMs = -kCallEveryMs;
+int g_lastCandCount = -1;
+const char* g_lastCandSource = "";
+bool g_roundFromSubnet = false;
+
+// The last outcome of calling each address, so the log says once (not every 5 s) why a phone did not answer.
+// err: -1 = no answer within kProbeTimeoutMs, otherwise an errno. Forgotten when a phone connects.
+struct CallResult { unsigned long ip; int err; };
+CallResult g_results[kMaxCandidates];
+int g_resultCount = 0;
+
+void ipText(unsigned long ip, char* out, size_t n) {
+    snprintf(out, n, "%lu.%lu.%lu.%lu", (ip >> 24) & 255, (ip >> 16) & 255, (ip >> 8) & 255, ip & 255);
+}
+
+void noteCallResult(unsigned long ip, int err) {
+    if (g_roundFromSubnet && err == -1) return;    // most of a subnet never answers: not worth a line each
+    int i = 0;
+    while (i < g_resultCount && g_results[i].ip != ip) ++i;
+    if (i == g_resultCount) {
+        if (g_resultCount == kMaxCandidates) return;
+        g_results[i].ip = ip;
+        g_results[i].err = 0;
+        ++g_resultCount;
+    }
+    if (g_results[i].err == err) return;
+    g_results[i].err = err;
+    char name[24];
+    ipText(ip, name, sizeof(name));
+    if (err == -1) blog("calling %s:%u: no answer within %ld ms (dropped on the way, or the phone ignores it)",
+                        name, (unsigned)g_conf.phonePort, kProbeTimeoutMs);
+    else blog("calling %s:%u: %s", name, (unsigned)g_conf.phonePort, strerror(err));
+}
+
+int probeCount() {
+    int n = 0;
+    for (int i = 0; i < kMaxProbes; ++i) if (g_probes[i].fd >= 0) ++n;
+    return n;
+}
+
+void closeProbes() {
+    for (int i = 0; i < kMaxProbes; ++i) if (g_probes[i].fd >= 0) { close(g_probes[i].fd); g_probes[i].fd = -1; }
+    g_candCount = g_candNext = 0;
+}
+
+// Reads a /proc file (its size shows as 0, so stat() does not tell how much there is).
+bool readProcFile(const char* path, char* buf, size_t n) {
+    FILE* f = fopen(path, "r");
+    if (!f) return false;
+    size_t got = fread(buf, 1, n - 1, f);
+    fclose(f);
+    buf[got] = 0;
+    return got > 0;
+}
+
+// Who to call this round: phoneAddress=, else the phones in the ARP table of the Wi-Fi interface (Linux), else every
+// address of its /24. Nothing when the plugin listens on an address from bridge.conf (no interface to look at).
+void startCallRound(long now) {
+    g_candCount = g_candNext = 0;
+    unsigned long own = bridge::parseIPv4(g_listenAddr);
+    const char* source = "";
+    g_roundFromSubnet = false;
+    if (g_conf.phoneAddress[0]) {
+        unsigned long a = bridge::parseIPv4(g_conf.phoneAddress);
+        if (a) { g_cand[g_candCount++] = a; source = "bridge.conf phoneAddress"; }
+    } else if (g_listenIface[0] && own) {
+        static char arp[16384];
+        if (readProcFile("/proc/net/arp", arp, sizeof(arp))) {
+            g_candCount = bridge::parseArpTable(arp, g_listenIface, g_cand, kMaxCandidates);
+            source = "ARP table";
+        }
+        if (g_candCount == 0) {
+            g_candCount = bridge::subnetHosts(own, g_listenMask, g_cand, kMaxCandidates);
+            source = "the whole subnet";
+            g_roundFromSubnet = true;
+        }
+    }
+    if (g_candCount != g_lastCandCount || strcmp(source, g_lastCandSource) != 0) {
+        char list[96] = "";                // the addresses themselves, when there are only a few
+        if (g_candCount > 0 && g_candCount <= 4) {
+            for (int i = 0; i < g_candCount; ++i) {
+                char one[24];
+                ipText(g_cand[i], one, sizeof(one));
+                size_t used = strlen(list);
+                snprintf(list + used, sizeof(list) - used, "%s%s", i ? ", " : " (", one);
+            }
+            size_t used = strlen(list);
+            snprintf(list + used, sizeof(list) - used, ")");
+        }
+        if (g_candCount) blog("no phone connected: calling %d address(es)%s from %s on port %u, every %ld s",
+                              g_candCount, list, source, (unsigned)g_conf.phonePort, kCallEveryMs / 1000);
+        g_lastCandCount = g_candCount;
+        g_lastCandSource = source;
+    }
+    if (g_candCount == 0) g_roundDoneMs = now;
+}
+
+void startProbes(long now) {
+    while (g_candNext < g_candCount && probeCount() < kMaxProbes) {
+        unsigned long ip = g_cand[g_candNext++];
+        int fd = socket(AF_INET, SOCK_STREAM, 0);
+        if (fd < 0) return;
+        setNonBlocking(fd);
+        struct sockaddr_in sin;
+        memset(&sin, 0, sizeof(sin));
+        sin.sin_family = AF_INET;
+        sin.sin_port = htons(g_conf.phonePort);
+        sin.sin_addr.s_addr = htonl(ip);
+        if (connect(fd, reinterpret_cast<struct sockaddr*>(&sin), sizeof(sin)) == 0) {
+            char name[24];
+            ipText(ip, name, sizeof(name));
+            g_resultCount = 0;
+            addClient(fd, name, "the plugin called it", now);
+            closeProbes();
+            return;
+        }
+        if (errno != EINPROGRESS && errno != EWOULDBLOCK) { noteCallResult(ip, errno); close(fd); continue; }
+        for (int i = 0; i < kMaxProbes; ++i) {
+            if (g_probes[i].fd < 0) { g_probes[i].fd = fd; g_probes[i].ip = ip; g_probes[i].startMs = now; break; }
+        }
+    }
+}
+
+// One probe's socket became writable or failed: connected (a client now) or not (closed).
+void probeDone(int i, long now) {
+    Probe& p = g_probes[i];
+    int err = 0;
+    socklen_t len = sizeof(err);
+    if (getsockopt(p.fd, SOL_SOCKET, SO_ERROR, &err, &len) != 0) err = errno;
+    if (err != 0) { noteCallResult(p.ip, err); close(p.fd); p.fd = -1; return; }
+    char name[24];
+    ipText(p.ip, name, sizeof(name));
+    int fd = p.fd;
+    p.fd = -1;
+    closeProbes();                         // one phone found: this round is over
+    g_resultCount = 0;                     // after it leaves, failures are worth logging again
+    addClient(fd, name, "the plugin called it", now);
+}
+
+// Each turn of the network loop: start or carry on with a round while no phone is connected; nothing otherwise.
+void callPhones(long now) {
+    if (g_listenFd < 0 || g_conf.phonePort == 0 || clientCount() > 0) {
+        if (probeCount() || g_candCount) closeProbes();
+        return;
+    }
+    for (int i = 0; i < kMaxProbes; ++i) {
+        if (g_probes[i].fd >= 0 && now - g_probes[i].startMs >= kProbeTimeoutMs) {
+            noteCallResult(g_probes[i].ip, -1);
+            close(g_probes[i].fd); g_probes[i].fd = -1; }
+    }
+    if (g_candCount == 0 || (g_candNext >= g_candCount && probeCount() == 0)) {
+        if (g_candCount && g_candNext >= g_candCount) { g_candCount = g_candNext = 0; g_roundDoneMs = now; }
+        if (now - g_roundDoneMs < kCallEveryMs) return;
+        startCallRound(now);
+    }
+    startProbes(now);
 }
 
 // Moves the queued CDS changes to every phone's buffer.
@@ -512,6 +696,10 @@ void* networkMain(void*) {
     sigaddset(&block, SIGPIPE);
     pthread_sigmask(SIG_BLOCK, &block, NULL);
     for (int i = 0; i < kMaxClients; ++i) { g_clients[i].fd = -1; g_clients[i].out = NULL; g_clients[i].len = g_clients[i].cap = 0; }
+    for (int i = 0; i < kMaxProbes; ++i) g_probes[i].fd = -1;
+    g_candCount = g_candNext = 0;
+    g_roundDoneMs = monoMs() - kCallEveryMs;
+    g_lastCandCount = -1;
     long lastCheck = -kAddressCheckMs;
     int state = kStateNoWifi;
     bool loggedNoWifi = false;
@@ -519,11 +707,17 @@ void* networkMain(void*) {
         long now = monoMs();
         if (now - lastCheck >= kAddressCheckMs) {
             lastCheck = now;
-            char addr[48];
-            findListenAddress(addr, sizeof(addr));
+            char addr[48], iface[32];
+            unsigned long mask;
+            findListenAddress(addr, sizeof(addr), iface, sizeof(iface), &mask);
             if (strcmp(addr, g_listenAddr) != 0 || (g_listenFd < 0 && addr[0])) {
                 if (g_listenFd >= 0) closeListen(addr[0] ? "Wi-Fi address changed" : "Wi-Fi gone");
-                if (addr[0]) { state = openListen(addr); loggedNoWifi = false; }
+                if (addr[0]) {
+                    state = openListen(addr);
+                    snprintf(g_listenIface, sizeof(g_listenIface), "%s", iface);
+                    g_listenMask = mask;
+                    loggedNoWifi = false;
+                }
                 else {
                     state = kStateNoWifi;
                     if (!loggedNoWifi) blog("no Wi-Fi address yet (car Wi-Fi off?): checking every %ld s", kAddressCheckMs / 1000);
@@ -531,8 +725,9 @@ void* networkMain(void*) {
                 }
             }
         }
-        struct pollfd fds[2 + kMaxClients];
-        int idx[2 + kMaxClients];
+        callPhones(now);
+        struct pollfd fds[2 + kMaxClients + kMaxProbes];
+        int idx[2 + kMaxClients + kMaxProbes];
         int nf = 0;
         fds[nf].fd = g_wake[0]; fds[nf].events = POLLIN; fds[nf].revents = 0; idx[nf++] = -2;
         if (g_listenFd >= 0) { fds[nf].fd = g_listenFd; fds[nf].events = POLLIN; fds[nf].revents = 0; idx[nf++] = -1; }
@@ -542,6 +737,13 @@ void* networkMain(void*) {
             fds[nf].events = (short)(POLLIN | (g_clients[i].len ? POLLOUT : 0));
             fds[nf].revents = 0;
             idx[nf++] = i;
+        }
+        for (int i = 0; i < kMaxProbes; ++i) {
+            if (g_probes[i].fd < 0) continue;
+            fds[nf].fd = g_probes[i].fd;
+            fds[nf].events = POLLOUT;
+            fds[nf].revents = 0;
+            idx[nf++] = 1000 + i;
         }
         int r = poll(fds, (nfds_t)nf, 500);
         now = monoMs();
@@ -553,6 +755,8 @@ void* networkMain(void*) {
                 while (read(g_wake[0], drain, sizeof(drain)) > 0) {}
             } else if (idx[k] == -1) {
                 acceptClient(now);
+            } else if (idx[k] >= 1000) {
+                if (g_probes[idx[k] - 1000].fd == fds[k].fd) probeDone(idx[k] - 1000, now);
             } else {
                 Client& c = g_clients[idx[k]];
                 if (fds[k].revents & (POLLIN | POLLHUP | POLLERR)) {

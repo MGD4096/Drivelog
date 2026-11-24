@@ -39,6 +39,7 @@ class CarsScreen(
     io: ExecutorService,
 ) {
     private val details = FileCarDetailsStore(File(activity.filesDir, "cars.json"))
+    private val readings = dev.drivelog.core.FileLastReadingStore(File(activity.filesDir, dev.drivelog.core.FileLastReadingStore.FILE_NAME))
     private val events = FileCarEventsStore(File(activity.filesDir, "car_events.json"))
     private val widgets = CarWidgets(activity, ui, io)
     private val list = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
@@ -104,7 +105,7 @@ class CarsScreen(
 
     private fun card(car: CarRef): View {
         val d = details.get(car.address)
-        val s = VehicleSummary.of(car.address, trips)
+        val s = VehicleSummary.of(car.address, trips, details = d, reading = readings.get(car.address))
         val card = ui.card()
         card.isClickable = true
         card.setOnClickListener { open(car) }

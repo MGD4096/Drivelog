@@ -58,6 +58,7 @@ class InfoActivity : Activity() {
         text.text = getString(R.string.info_text) + "\n\n" +
             getString(if (drivelog) R.string.drivelog_installed else R.string.drivelog_missing) + "\n\n" +
             getString(R.string.state_label, stateText) + "\n\n" +
+            Id6PluginService.diagnostics.let { if (it.isEmpty()) "" else getString(R.string.diagnostics_label) + "\n" + it + "\n\n" } +
             getString(R.string.version_label, packageManager.getPackageInfo(packageName, 0).versionName)
     }
 

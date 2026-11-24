@@ -6,6 +6,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -177,5 +178,76 @@ class PluginSourceTest {
         val src = headunitSource()
         assumeTrue("headunit/src/bridge_core.hpp not found", src != null)
         assertNotNull(Regex("kDefaultPort = ${BridgeClient.DEFAULT_PORT};").find(src!!.readText()))
+        assertNotNull(Regex("kDefaultPhonePort = ${HeadUnitCalls.PHONE_PORT};").find(src.readText()))
+    }
+}
+
+/** The head unit calls the phone (wireless Android Auto keeps the car's Wi-Fi to itself): HeadUnitCalls. */
+class HeadUnitCallsTest {
+    private val car = CdsState()
+
+    /** Plays the head-unit plugin calling: connects to [port] and writes the lines the plugin writes. */
+    private fun call(port: Int, vararg lines: String): java.net.Socket =
+        java.net.Socket(java.net.InetAddress.getLoopbackAddress(), port).apply {
+            getOutputStream().write(lines.joinToString("") { it + "\n" }.toByteArray(Charsets.UTF_8))
+            getOutputStream().flush()
+        }
+
+    @Test
+    fun aCallFromTheHeadUnitCarriesTheValues() {
+        HeadUnitCalls(port = 0).use { calls ->
+            val client = BridgeClient(car, connect = { calls.accept(2_000) }, retryMs = 50)
+            client.start()
+            try {
+                val hu = call(
+                    calls.boundPort,
+                    """{"type":"hello","proto":1,"app":"drivelog-bridge-0.1.0 EntryNav2","t":1,"props":15}""",
+                    """{"type":"snapshot","t":2,"values":{"driving.odometer":{"odometer":12345},"sensors.battery":{"battery":86}}}""",
+                )
+                waitFor("connected") { client.state == BridgeClient.State.CONNECTED }
+                waitFor("values") { car.values().odometerKm == 12345.0 }
+                assertEquals(86.0, car.values().batteryPercent!!, 0.0)
+                assertEquals(1, calls.calls)
+                assertEquals("127.0.0.1", calls.lastCaller)
+                hu.close()
+            } finally {
+                client.stop()
+            }
+        }
+    }
+
+    @Test
+    fun nobodyCallingIsNoNetworkAndCallsFromOutsideAreRefused() {
+        HeadUnitCalls(port = 0, allowed = { false }).use { calls ->
+            val client = BridgeClient(car, connect = { calls.accept(300) }, retryMs = 50)
+            client.start()
+            try {
+                waitFor("waiting") { client.state == BridgeClient.State.NO_NETWORK }
+                val s = java.net.Socket(java.net.InetAddress.getLoopbackAddress(), calls.boundPort)
+                waitFor("refused") { s.getInputStream().read() == -1 }    // closed by the phone at once
+                assertEquals(0, calls.calls)
+                assertNull(client.lastError)
+            } finally {
+                client.stop()
+            }
+        }
+        assertTrue(HeadUnitCalls.isLocalPeer(java.net.InetAddress.getByName("172.16.224.1")))
+        assertTrue(HeadUnitCalls.isLocalPeer(java.net.InetAddress.getByName("192.168.1.5")))
+        assertFalse(HeadUnitCalls.isLocalPeer(java.net.InetAddress.getByName("8.8.8.8")))
+    }
+
+    @Test
+    fun closingWhileWaitingEndsTheWait() {
+        val calls = HeadUnitCalls(port = 0)
+        val t = Thread { Thread.sleep(200); calls.close() }.apply { start() }
+        val started = System.currentTimeMillis()
+        try {
+            calls.accept(5_000)
+            fail("accept should throw once closed")
+        } catch (e: java.io.IOException) {
+            // expected
+        }
+        assertTrue(System.currentTimeMillis() - started < 3_000)
+        t.join()
     }
 }

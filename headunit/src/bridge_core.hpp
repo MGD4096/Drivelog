@@ -33,6 +33,7 @@ enum { kPropertyCount = sizeof(kProperties) / sizeof(kProperties[0]) };
 
 const int kProtocolVersion = 1;
 const unsigned short kDefaultPort = 7777;
+const unsigned short kDefaultPhonePort = 7778;    // where the plugin calls the phone (see the network thread)
 const size_t kValueBytes = 1024;            // one value as UTF-8; the car's are well under 400 characters
 
 // UTF-16 (zero-terminated) -> UTF-8, also zero-terminated; at most out_size - 1 bytes, never a cut sequence.
@@ -131,13 +132,17 @@ inline int snapshotLine(char* out, size_t n, const char* const* values, long t) 
 //   interface=wlan0    listen only on this interface's IPv4 address
 //   address=a.b.c.d    listen only on this address (wins over interface; the only way to allow 127.0.0.1)
 //   clients=2          phones at the same time (1..4)
-// Without interface/address: the car's Wi-Fi, found by the rule in pickInterface().
+//   phonePort=7778     the port the plugin calls phones on when none has connected (0 = never call)
+//   phoneAddress=a.b.c.d  call only this phone (otherwise: the ARP table, then the whole /24 of the Wi-Fi)
+// Without interface/address: the car's Wi-Fi, found by the rule in interfaceScore().
 struct Config {
     unsigned short port;
     char iface[32];
     char address[48];
     int maxClients;
-    Config() : port(kDefaultPort), maxClients(2) { iface[0] = 0; address[0] = 0; }
+    unsigned short phonePort;
+    char phoneAddress[48];
+    Config() : port(kDefaultPort), maxClients(2), phonePort(kDefaultPhonePort) { iface[0] = 0; address[0] = 0; phoneAddress[0] = 0; }
 };
 
 inline void parseConfig(const char* text, Config& c) {
@@ -165,6 +170,11 @@ inline void parseConfig(const char* text, Config& c) {
             } else if (strcmp(key, "clients") == 0) {
                 long k = strtol(val, NULL, 10);
                 if (k >= 1 && k <= 4) c.maxClients = (int)k;
+            } else if (strcmp(key, "phonePort") == 0) {
+                long p = strtol(val, NULL, 10);
+                if (p >= 0 && p < 65536) c.phonePort = (unsigned short)p;
+            } else if (strcmp(key, "phoneAddress") == 0) {
+                snprintf(c.phoneAddress, sizeof(c.phoneAddress), "%s", val);
             }
         }
         if (!end) break;
@@ -181,6 +191,55 @@ inline int interfaceScore(const char* name, unsigned long addr) {
     if (strncmp(name, "uap", 3) == 0 || strncmp(name, "wl", 2) == 0) return 3;
     if ((addr >> 8) == 0xAC10E0UL) return 2;                 // 172.16.224.x
     return 0;
+}
+
+// ---- finding phones on the car's Wi-Fi ----------------------------------------------------------------------------
+// Android lets wireless Android Auto keep the car's Wi-Fi to itself (a network only the app that asked for it may
+// use), so another app on the phone cannot connect to the head unit. A connection *to* the phone still reaches an app
+// that listens on a port: the plugin calls the phones it finds on its Wi-Fi.
+
+// "a.b.c.d" -> host order; 0 when not an address.
+inline unsigned long parseIPv4(const char* s) {
+    unsigned long a = 0;
+    int parts = 0;
+    while (s && *s && parts < 4) {
+        char* end;
+        long v = strtol(s, &end, 10);
+        if (end == s || v < 0 || v > 255) return 0;
+        a = (a << 8) | (unsigned long)v;
+        ++parts;
+        s = end;
+        if (parts < 4) { if (*s != '.') return 0; ++s; }
+    }
+    return parts == 4 && (!s || *s == 0 || *s == ' ' || *s == '\t') ? a : 0;
+}
+
+// Linux /proc/net/arp ("IP address  HW type  Flags  HW address  Mask  Device"): the complete entries (flags 0x2) of
+// interface iface (any when empty). Writes up to max addresses (host order); returns how many.
+inline int parseArpTable(const char* text, const char* iface, unsigned long* out, int max) {
+    int n = 0;
+    const char* line = text ? strchr(text, '\n') : NULL;     // the first line is the header
+    while (line && *line && n < max) {
+        ++line;
+        char ip[64], type[16], flags[16], hw[32], mask[16], dev[32];
+        if (sscanf(line, "%63s %15s %15s %31s %15s %31s", ip, type, flags, hw, mask, dev) == 6) {
+            unsigned long a = parseIPv4(ip);
+            unsigned long f = strtoul(flags, NULL, 16);
+            if (a && (f & 0x2) && (!iface || !iface[0] || strcmp(dev, iface) == 0)) out[n++] = a;
+        }
+        line = strchr(line, '\n');
+    }
+    return n;
+}
+
+// Every host of own's subnet except own, the network and the broadcast address; a subnet wider than /24 is cut to
+// the /24 around own (a hotspot hands out a small range). Returns how many (at most max).
+inline int subnetHosts(unsigned long own, unsigned long mask, unsigned long* out, int max) {
+    if (mask < 0xFFFFFF00UL) mask = 0xFFFFFF00UL;
+    unsigned long net = own & mask, bcast = net | (~mask & 0xFFFFFFFFUL);
+    int n = 0;
+    for (unsigned long a = net + 1; a < bcast && n < max; ++a) if (a != own) out[n++] = a;
+    return n;
 }
 
 } // namespace bridge

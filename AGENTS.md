@@ -16,7 +16,7 @@ an iDrive plugin that runs inside the head unit. The maintainer writes in Polish
 | `plugins/id6/` | Drivelog ID6 (`dev.drivelog.id6`): `Cds.kt` (BMW CDS formats → `CarValues`), `Bridge.kt` (TCP client of the head-unit plugin), `CarWifi.kt`, `Id6PluginService.kt`, `InfoActivity` (no launcher icon) | Android app |
 | `headunit/` | DrivelogBridge: iDrive PluginApp in C++98 for NBT Evo (QNX 6.5) and EntryNav2 (Linux ARMv7hf); serves 15 CDS values on TCP 7777 as JSON lines | C++ |
 
-Data path: car CDS → `headunit/` (TCP 7777, JSON lines) → `plugins/id6` (BMW formats → `CarValues`, sent as a
+Data path: car CDS → `headunit/` (TCP, JSON lines; the head unit calls the phone on 7778, or the phone calls 7777) → `plugins/id6` (BMW formats → `CarValues`, sent as a
 `Bundle` over AIDL at most once a second, on change) → Drivelog `CarState` → trip recorder / screens.
 
 Background knowledge about the head units (CDS property formats, framework ABI, measurements):
@@ -35,8 +35,12 @@ Environment: Windows, PowerShell, Git Bash, Docker Desktop. No Python, g++ or Ja
 - Head-unit plugin, built for ARM and run under qemu against a fake framework (always after a `headunit/` change):
   `bash headunit/toolchain/check.sh` (Git Bash; uses the Docker images `gauge-entrynav2-tc` / `entrynav2-runner`,
   or `drivelog-*` built from `headunit/toolchain/`).
-- EntryNav2 package: `cd headunit && bash toolchain/run.sh tc make entrynav2-dist` (needs the car's libs in
-  `headunit/lib/entrynav2/`). NBT Evo: `headunit\build_nbt.bat` (needs QNX SDP 6.5; not available on this PC).
+- EntryNav2 package: `headunit/build_entryNav2.bat` (`check` = host test first; or `cd headunit && bash toolchain/run.sh tc make entrynav2-dist`) (needs the car's libs in
+  `headunit/lib/entrynav2/`). NBT Evo: `headunit\build_nbt.bat dist` (needs QNX SDP 6.5; not available on this PC)
+  → `headunit\dist\drivelog-bridge-nbt\` (USB stick contents) and `.tar`; `build_nbt.bat pack` only packs an
+  existing `build\nbt\libDrivelogBridge.so` (`toolchain\pack_nbt.ps1`, Windows' PowerShell and tar).
+- Line endings are fixed in `.gitattributes` (`*.sh`, `*.py`, `Makefile` LF; `*.bat`, `*.ps1` CRLF): a CR in a script
+  that runs on the head unit or in Docker breaks it.
 - Text/image database of the head-unit plugin (after editing `headunit/make_db.py`):
   `cd headunit && bash toolchain/run.sh runner make db`. The zips are committed.
 
@@ -78,6 +82,11 @@ Environment: Windows, PowerShell, Git Bash, Docker Desktop. No Python, g++ or Ja
 - **Commits:** only when the maintainer asks. They usually review first.
 
 ## Gotchas
+
+- **Wireless Android Auto keeps the car's Wi-Fi to itself** (seen in the car: the plugin saw no Wi-Fi network, no
+  Wi-Fi icon on the phone, AA working). An app cannot open a connection to the head unit then. So the head-unit plugin
+  calls the phone on port 7778 (`HeadUnitCalls`, `callPhones()` in `drivelog_bridge.cpp`); the phone→car way on 7777
+  stays for an ordinary Wi-Fi connection. Keep both.
 
 - Under qemu on a Windows bind mount, 32-bit `stat()` fails with `EOVERFLOW`: the head-unit host test keeps its data
   folder in the container's `/tmp`. `docker cp` cannot copy symlinks to Windows: the ARM sysroot travels as a tar.

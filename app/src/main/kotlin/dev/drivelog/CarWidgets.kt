@@ -285,7 +285,7 @@ class CarWidgets(
     /** The state of doors, windows, roof, tailgate and bonnet: [closed] is null when the car never reported it. */
     class DoorsStatus(val text: String, val closed: Boolean?, val note: String?, val parts: List<String>? = null)
 
-    /** Live while a trip runs in this car, otherwise as the car reported it at the end of its latest trip. */
+    /** Live while a trip runs in this car, otherwise as the car reported it last (saved reading, or the end of a trip). */
     fun doorsStatus(car: CarRef, known: LastKnownCar?): DoorsStatus {
         val status = AppState.status
         if (status.phase != Phase.IDLE && status.carName == car.name) {
@@ -294,7 +294,8 @@ class CarWidgets(
         val parts = known?.openParts
         if (parts != null) {
             val at = known.openPartsAtMs ?: known.atMs
-            return DoorsStatus(OpenPartsText.describe(parts), parts.isEmpty(), tr("at the end of the trip on {0}", ui.date(at)), parts)
+            val note = if (known.fromReading) tr("last read {0}", ui.dateTime(at)) else tr("at the end of the trip on {0}", ui.date(at))
+            return DoorsStatus(OpenPartsText.describe(parts), parts.isEmpty(), note, parts)
         }
         return DoorsStatus("—", null, null)
     }
@@ -313,7 +314,10 @@ class CarWidgets(
         if (status.phase != Phase.IDLE && status.carName == car.name) {
             format(AppState.car.snapshot())?.let { return tr("{0} (live)", it) }
         }
-        if (known != null) format(known.snapshot)?.let { return tr("{0} (at the end of the trip on {1})", it, ui.date(known.atMs)) }
+        if (known != null) format(known.snapshot)?.let {
+            return if (known.fromReading) tr("{0} (last read {1})", it, ui.dateTime(known.atMs))
+            else tr("{0} (at the end of the trip on {1})", it, ui.date(known.atMs))
+        }
         return "—"
     }
 
@@ -327,6 +331,7 @@ class CarWidgets(
             AppState.car.snapshot().odometerKm?.let { return tr("{0} km (live)", ui.km(it)) }
         }
         val km = s.odometerKm ?: return "—"
+        if (s.odometerFromReading) return tr("{0} km (last read {1})", ui.km(km), ui.dateTime(s.odometerAtMs ?: 0L))
         return tr("{0} km (at the end of the trip on {1})", ui.km(km), ui.date(s.odometerAtMs ?: 0L))
     }
 }

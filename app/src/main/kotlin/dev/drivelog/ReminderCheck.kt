@@ -35,8 +35,9 @@ object ReminderCheck {
         val trips = try { FileTripStore(File(app.filesDir, "trips")).list() } catch (e: Exception) { emptyList() }
         val events = FileCarEventsStore(File(app.filesDir, "car_events.json"))
         val details = FileCarDetailsStore(File(app.filesDir, "cars.json"))
+        val readings = dev.drivelog.core.FileLastReadingStore(File(app.filesDir, dev.drivelog.core.FileLastReadingStore.FILE_NAME))
         val cars = Prefs.cars(app).filter { !details.get(it.address).archived }.map { car ->
-            val summary = VehicleSummary.of(car.address, trips)
+            val summary = VehicleSummary.of(car.address, trips, reading = readings.get(car.address))
             CarForReminders(car.address, car.name, events.list(car.address), CarTexts.currentOdometerKm(car, summary, details.get(car.address)))
         }
         val before = AppSettings.notified(app)

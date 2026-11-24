@@ -615,9 +615,13 @@ class MainActivity : Activity() {
         io.execute {
             val list = try { s.list() } catch (e: Exception) { emptyList() }      // newest first
             // Fuel and range per car come from the end of its latest trip (reads trip files, so off the main thread)
+            // and from the latest values each car sent, saved apart from the trips
+            val readings = dev.drivelog.core.FileLastReadingStore(File(filesDir, dev.drivelog.core.FileLastReadingStore.FILE_NAME)).all()
             val known = HashMap<String, LastKnownCar>()
             for (car in Prefs.cars(this)) {
-                try { LastKnownCar.find(car.address, list, s)?.let { known[car.address.lowercase(Locale.ROOT)] = it } } catch (e: Exception) { /* none */ }
+                val key = car.address.lowercase(Locale.ROOT)
+                val fromTrips = try { LastKnownCar.find(car.address, list, s) } catch (e: Exception) { null }
+                LastKnownCar.withReading(fromTrips, readings[key])?.let { known[key] = it }
             }
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread

@@ -39,6 +39,13 @@ data class CarDetails(
     val manualOdometerAtMs: Long? = null,
     /** Out of use: hidden in the main list (shown under "Archive"), no trips are recorded for it and no reminders are sent. */
     val archived: Boolean = false,
+    /**
+     * Where the latest trip ended, saved or not (a trip too short to keep is not saved, but the car was still moved).
+     * [VehicleSummary.of] uses it when it is newer than the end of the latest saved trip.
+     */
+    val parkedLat: Double? = null,
+    val parkedLon: Double? = null,
+    val parkedAtMs: Long? = null,
 ) {
     val isEmpty: Boolean get() = this == CarDetails()
 
@@ -61,6 +68,9 @@ data class CarDetails(
     /** The odometer reading to use for a car without a plugin; null when nothing was typed in yet. */
     fun withManualOdometer(km: Double?, atMs: Long): CarDetails =
         if (km == null) copy(manualOdometerKm = null, manualOdometerAtMs = null) else copy(manualOdometerKm = km, manualOdometerAtMs = atMs)
+
+    /** Remembers where the car was left at [atMs]. */
+    fun withParked(lat: Double, lon: Double, atMs: Long): CarDetails = copy(parkedLat = lat, parkedLon = lon, parkedAtMs = atMs)
 
     /** Takes a photo out of the gallery; when it was the main one the next photo takes its place. */
     fun withoutPhoto(name: String): CarDetails = when {
@@ -181,12 +191,14 @@ data class VehicleSummary(
     /** Odometer at the end of the car's latest trip that had one. */
     val odometerKm: Double?,
     val odometerAtMs: Long?,
-    /** Where the car's latest trip with a GPS track ended: where it is parked. */
+    /** Where the car is parked: the end of its latest trip with a GPS track, or [CarDetails.parkedLat] when newer. */
     val parkedLat: Double?,
     val parkedLon: Double?,
     val parkedAtMs: Long?,
     /** Start time and distance of each of the car's trips, for adding up what was driven since a manual odometer entry. */
     val tripKms: List<Pair<Long, Double>> = emptyList(),
+    /** The odometer comes from the saved latest reading, not from the end of a trip. */
+    val odometerFromReading: Boolean = false,
 ) {
     /** Kilometres driven on trips that started at or after [sinceMs]. */
     fun kmSince(sinceMs: Long): Double = tripKms.filter { it.first >= sinceMs }.sumOf { it.second }
@@ -206,21 +218,29 @@ data class VehicleSummary(
             trips: List<TripMeta>,
             year: Int = LocalDate.now().year,
             zone: ZoneId = ZoneId.systemDefault(),
+            /** The car's details: a parking place remembered after a trip too short to keep. */
+            details: CarDetails? = null,
+            /** The latest values the car reported ([FileLastReadingStore]): its odometer, when newer than the trips'. */
+            reading: LastReading? = null,
         ): VehicleSummary {
             val mine = trips.filter { it.carId.equals(carId, ignoreCase = true) }.sortedByDescending { it.endMs }
             val thisYear = mine.filter { Instant.ofEpochMilli(it.startMs).atZone(zone).year == year }
             val odo = mine.firstOrNull { (it.summary.endOdometerKm ?: it.summary.startOdometerKm) != null }
+            val readOdo = reading?.takeIf { r -> r.values.odometerKm != null && r.atMs > (odo?.endMs ?: Long.MIN_VALUE) }
             val park = mine.firstOrNull { it.summary.endLat != null && it.summary.endLon != null }
+            val tripParkedAt = park?.endMs ?: Long.MIN_VALUE
+            val remembered = details?.takeIf { it.parkedLat != null && it.parkedLon != null && (it.parkedAtMs ?: Long.MIN_VALUE) > tripParkedAt }
             return VehicleSummary(
                 tripCount = mine.size,
                 totalKm = mine.sumOf { it.summary.distanceKm },
                 yearTripCount = thisYear.size,
                 yearKm = thisYear.sumOf { it.summary.distanceKm },
-                odometerKm = odo?.let { it.summary.endOdometerKm ?: it.summary.startOdometerKm },
-                odometerAtMs = odo?.endMs,
-                parkedLat = park?.summary?.endLat,
-                parkedLon = park?.summary?.endLon,
-                parkedAtMs = park?.endMs,
+                odometerKm = readOdo?.values?.odometerKm ?: odo?.let { it.summary.endOdometerKm ?: it.summary.startOdometerKm },
+                odometerAtMs = readOdo?.atMs ?: odo?.endMs,
+                odometerFromReading = readOdo != null,
+                parkedLat = remembered?.parkedLat ?: park?.summary?.endLat,
+                parkedLon = remembered?.parkedLon ?: park?.summary?.endLon,
+                parkedAtMs = remembered?.parkedAtMs ?: park?.endMs,
                 tripKms = mine.map { it.startMs to it.summary.distanceKm },
             )
         }
@@ -228,7 +248,7 @@ data class VehicleSummary(
 }
 
 /**
- * What the car reported at the end of its latest trips: fuel and range ([snapshot], at [atMs]) and which doors, windows
+ * What the car reported last (the saved latest reading, [withReading]) or at the end of its latest trips: fuel and range ([snapshot], at [atMs]) and which doors, windows
  * and so on were open ([openParts], at [openPartsAtMs]). Each comes from the latest trip that had it.
  */
 data class LastKnownCar(
@@ -236,8 +256,26 @@ data class LastKnownCar(
     val atMs: Long,
     val openParts: List<String>? = null,
     val openPartsAtMs: Long? = null,
+    /** True when it comes from the saved latest reading ([FileLastReadingStore]) rather than from the end of a trip. */
+    val fromReading: Boolean = false,
 ) {
     companion object {
+        /**
+         * The saved latest reading when it is newer than what the trips tell (it normally is: it is saved as the values
+         * come in, also during trips that are not kept). Doors and windows the reading lacks come from the trips.
+         */
+        fun withReading(fromTrips: LastKnownCar?, reading: LastReading?): LastKnownCar? {
+            if (reading == null || (fromTrips != null && fromTrips.atMs > reading.atMs)) return fromTrips
+            val parts = reading.values.openParts
+            return LastKnownCar(
+                snapshot = reading.values,
+                atMs = reading.atMs,
+                openParts = parts ?: fromTrips?.openParts,
+                openPartsAtMs = if (parts != null) reading.atMs else fromTrips?.openPartsAtMs,
+                fromReading = true,
+            )
+        }
+
         /**
          * Looks at the car's latest trips (up to [LOOK_BACK]) for ones that ended with a fuel or range reading, or with
          * a doors-and-windows state. Reads trip files, so call it from a background thread.
@@ -362,6 +400,9 @@ class FileCarDetailsStore(private val file: File) {
                 manualOdometerKm = (m["manualOdometerKm"] as? Double)?.takeIf { it >= 0.0 },
                 manualOdometerAtMs = (m["manualOdometerAtMs"] as? Double)?.toLong(),
                 archived = (m["archived"] as? Boolean) ?: false,
+                parkedLat = (m["parkedLat"] as? Double)?.takeIf { it in -90.0..90.0 },
+                parkedLon = (m["parkedLon"] as? Double)?.takeIf { it in -180.0..180.0 },
+                parkedAtMs = (m["parkedAtMs"] as? Double)?.toLong(),
             )
         }
         return out
@@ -407,6 +448,11 @@ class FileCarDetailsStore(private val file: File) {
                 d.manualOdometerKm?.let { m["manualOdometerKm"] = it }
                 d.manualOdometerAtMs?.let { m["manualOdometerAtMs"] = it.toDouble() }
                 if (d.archived) m["archived"] = true
+                if (d.parkedLat != null && d.parkedLon != null && d.parkedAtMs != null) {
+                    m["parkedLat"] = d.parkedLat
+                    m["parkedLon"] = d.parkedLon
+                    m["parkedAtMs"] = d.parkedAtMs.toDouble()
+                }
                 m
             }
         )

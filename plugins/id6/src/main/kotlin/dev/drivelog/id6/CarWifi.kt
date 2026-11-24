@@ -30,6 +30,9 @@ class CarWifi(context: Context) {
     }
     private var registered = false
 
+    /** Wi-Fi networks Android lets this app use right now (0 with wireless Android Auto: see HeadUnitCalls). */
+    val visibleCount: Int get() = networks.size
+
     fun start() {
         if (registered) return
         // Any Wi-Fi, with or without internet (a request asks for internet unless that is removed).

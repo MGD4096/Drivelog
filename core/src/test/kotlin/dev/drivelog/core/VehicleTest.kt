@@ -116,6 +116,24 @@ class VehicleSummaryTest {
     }
 
     @Test
+    fun aParkingPlaceRememberedAfterAShortTripWinsWhenNewer() {
+        val trips = listOf(meta("AA:01", 1_000, 2_000, 10.0, 40_000.0, 50.0, 19.0))
+        val newer = CarDetails().withParked(52.5, 21.5, 9_000)
+        val s = VehicleSummary.of("AA:01", trips, details = newer)
+        assertEquals(52.5, s.parkedLat!!, 1e-9)
+        assertEquals(21.5, s.parkedLon!!, 1e-9)
+        assertEquals(9_000L, s.parkedAtMs)
+
+        val older = CarDetails().withParked(52.5, 21.5, 1_500)      // a saved trip ended later: that one counts
+        val t = VehicleSummary.of("AA:01", trips, details = older)
+        assertEquals(50.0, t.parkedLat!!, 1e-9)
+        assertEquals(2_000L, t.parkedAtMs)
+
+        val none = VehicleSummary.of("AA:01", emptyList(), details = newer)   // no saved trip at all
+        assertEquals(9_000L, none.parkedAtMs)
+    }
+
+    @Test
     fun aCarWithoutTripsHasNothing() {
         val s = VehicleSummary.of("AA:01", emptyList())
         assertEquals(0, s.tripCount)
@@ -130,7 +148,7 @@ class CarDetailsStoreTest {
     @Before fun setUp() { dir = Files.createTempDirectory("cars").toFile() }
     @After fun tearDown() { dir.deleteRecursively() }
 
-    private val full = CarDetails(vin = "WBA8E9C50GK123456", model = "Mazda \"MX-5\" <RF>", year = 2018, engineCc = 2998, photo = "a.jpg")
+    private val full = CarDetails(vin = "WBA8E9C50GK123456", model = "Mazda \"MX-5\" <RF>", year = 2018, engineCc = 2998, photo = "a.jpg", parkedLat = 52.25, parkedLon = 21.0, parkedAtMs = 1_700_000_000_123)
 
     @Test
     fun savesAndReadsBackEveryField() {

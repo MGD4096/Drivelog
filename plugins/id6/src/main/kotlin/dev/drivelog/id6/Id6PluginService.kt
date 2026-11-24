@@ -9,6 +9,7 @@ import dev.drivelog.pluginapi.CarPluginContract
 import dev.drivelog.pluginapi.CarValuesBundle
 import dev.drivelog.pluginapi.ICarDataSink
 import dev.drivelog.pluginapi.ICarPlugin
+import java.io.IOException
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -28,6 +29,9 @@ class Id6PluginService : Service() {
     private val worker = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "id6-plugin").apply { isDaemon = true } }
     private val cds = CdsState()
     private var wifi: CarWifi? = null
+    private var calls: HeadUnitCalls? = null
+    @Volatile private var wifiError: String? = null
+    private var callsError: String? = null
     private var client: BridgeClient? = null
     private var sink: ICarDataSink? = null
     private var reports: ScheduledFuture<*>? = null
@@ -68,7 +72,14 @@ class Id6PluginService : Service() {
             cds.reset()                        // values of an earlier drive must not look current
             val w = CarWifi(this).also { it.start() }
             wifi = w
-            client = BridgeClient(cds, connect = { w.connect(BridgeClient.DEFAULT_PORT) }).also { it.start() }
+            val incoming = try {
+                HeadUnitCalls()
+            } catch (e: IOException) {             // port taken: only the phone-calls-car way is left
+                callsError = e.message ?: e.javaClass.simpleName
+                null
+            }
+            calls = incoming
+            client = BridgeClient(cds, connect = { connectToHeadUnit(w, incoming) }).also { it.start() }
             reports = worker.scheduleWithFixedDelay({ report() }, 0, REPORT_MS, TimeUnit.MILLISECONDS)
         }
         report()
@@ -77,6 +88,8 @@ class Id6PluginService : Service() {
     private fun stopReading() {
         reports?.cancel(false)
         reports = null
+        calls?.close()                         // first: a waiting accept() returns at once
+        calls = null
         client?.stop()
         client = null
         wifi?.stop()
@@ -85,6 +98,9 @@ class Id6PluginService : Service() {
         sink = null
         try { s?.onStatus(CarPluginContract.STATE_STOPPED, "") } catch (_: RemoteException) {}
         lastStatus = CarPluginContract.STATE_STOPPED to ""
+        diagnostics = ""
+        callsError = null
+        wifiError = null
     }
 
     private fun report() {
@@ -92,6 +108,7 @@ class Id6PluginService : Service() {
         val c = client ?: return
         val status = statusOf(c)
         lastStatus = status
+        diagnostics = diagnosticsText()
         try {
             if (status != sentStatus) {
                 s.onStatus(status.first, status.second)
@@ -107,6 +124,37 @@ class Id6PluginService : Service() {
         }
     }
 
+    /**
+     * On the bridge client's thread. First the phone calls the head unit, if Android lets this app see the car's
+     * Wi-Fi (an ordinary Wi-Fi connection). With wireless Android Auto it does not: then wait up to [CALL_WAIT_MS] for
+     * the head unit to call ([HeadUnitCalls]). Null = nobody this time; the client tries again.
+     */
+    private fun connectToHeadUnit(w: CarWifi, incoming: HeadUnitCalls?): java.net.Socket? {
+        val direct = try {
+            w.connect(BridgeClient.DEFAULT_PORT).also { wifiError = null }
+        } catch (e: IOException) {
+            wifiError = e.message ?: e.javaClass.simpleName
+            null
+        }
+        if (direct != null) return direct
+        return incoming?.accept(CALL_WAIT_MS)
+    }
+
+    /** One line for the plugin's own screen: what each way of reaching the head unit is doing. */
+    private fun diagnosticsText(): String {
+        val w = wifi
+        val c = calls
+        val parts = ArrayList<String>()
+        parts += "Wi-Fi networks this app may use: ${w?.visibleCount ?: 0}" + (wifiError?.let { " ($it)" } ?: "")
+        parts += if (c != null) {
+            "listening for the head unit on port ${c.boundPort}: ${c.calls} call(s)" + (c.lastCaller?.let { ", last from $it" } ?: "")
+        } else {
+            "not listening for the head unit" + (callsError?.let { " ($it)" } ?: "")
+        }
+        client?.lastError?.let { parts += "last error: $it" }
+        return parts.joinToString("\n")
+    }
+
     private fun statusOf(c: BridgeClient): Pair<Int, String> = when (c.state) {
         BridgeClient.State.CONNECTED -> CarPluginContract.STATE_CONNECTED to (c.headUnit ?: "")
         BridgeClient.State.NO_NETWORK -> CarPluginContract.STATE_NO_CAR to ""
@@ -117,6 +165,11 @@ class Id6PluginService : Service() {
 
     companion object {
         private const val REPORT_MS = 1_000L
+        private const val CALL_WAIT_MS = 3_000
+
+        /** How the plugin is trying to reach the head unit, for [InfoActivity]. */
+        @Volatile var diagnostics: String = ""
+            private set
 
         /** The latest state, for the plugin's own screen ([InfoActivity]). */
         @Volatile var lastStatus: Pair<Int, String> = CarPluginContract.STATE_STOPPED to ""

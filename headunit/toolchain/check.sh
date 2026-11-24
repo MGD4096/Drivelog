@@ -13,5 +13,5 @@ bash "$run" runner sh -c 'set -e
   mkdir -p /sysroot && tar -xf build/sysroot.tar -C /sysroot
   [ -e /sysroot/lib/ld-linux.so.3 ] || ln -s ld-linux-armhf.so.3 /sysroot/lib/ld-linux.so.3
   rm -rf /tmp/drivelog-test && mkdir -p /tmp/drivelog-test/plugin
-  printf "address=127.0.0.1\nport=17777\n" > /tmp/drivelog-test/bridge.conf
+  printf "address=127.0.0.1\nport=17777\nphoneAddress=127.0.0.1\nphonePort=17778\n" > /tmp/drivelog-test/bridge.conf
   qemu-arm -L /sysroot build/test/host_test /work/build/test/libDrivelogBridge.so /tmp/drivelog-test || { cat /tmp/drivelog-test/bridge.log; exit 1; }'

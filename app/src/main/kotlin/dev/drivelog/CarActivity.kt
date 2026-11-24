@@ -34,6 +34,8 @@ import dev.drivelog.core.EventCosts
 import dev.drivelog.core.EventType
 import dev.drivelog.core.FileCarDetailsStore
 import dev.drivelog.core.FileCarEventsStore
+import dev.drivelog.core.FileLastReadingStore
+import dev.drivelog.core.LastReading
 import dev.drivelog.core.FileTripStore
 import dev.drivelog.core.LastKnownCar
 import dev.drivelog.core.CarHealth
@@ -67,9 +69,22 @@ class CarActivity : Activity() {
     private var car: CarRef? = null
     private var trips: List<TripMeta> = emptyList()
     private var known: LastKnownCar? = null
+    /** The latest values the car sent, saved apart from the trips. */
+    private var reading: LastReading? = null
+    private val readings by lazy { FileLastReadingStore(File(filesDir, FileLastReadingStore.FILE_NAME)) }
     /** The 12 V battery at the start of the latest trips, oldest first. */
     private var batteryHistory: List<CarHealth.BatteryReading> = emptyList()
     private var photoCallback: ((List<Uri>) -> Unit)? = null
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    /** The odometer, fuel and doors part of the page, redrawn on its own while a trip runs ([refreshLive]). */
+    private val liveBox by lazy { LinearLayout(this).apply { orientation = LinearLayout.VERTICAL } }
+    private var liveKey: Pair<Boolean, Long>? = null
+    private val liveTick = object : Runnable {
+        override fun run() {
+            refreshLive()
+            handler.postDelayed(this, LIVE_MS)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Colors.prepare(this)
@@ -104,15 +119,28 @@ class CarActivity : Activity() {
     override fun onResume() {
         super.onResume()
         if (car == null) return
+        load()
+        handler.postDelayed(liveTick, LIVE_MS)
+    }
+
+    override fun onPause() {
+        handler.removeCallbacks(liveTick)
+        super.onPause()
+    }
+
+    /** Reads the trips (and what they tell about the car) in the background, then draws the page again. */
+    private fun load() {
         io.execute {
             val store = try { FileTripStore(File(filesDir, "trips")) } catch (e: IOException) { null }
             val list = try { store?.list() ?: emptyList() } catch (e: Exception) { emptyList() }
-            val last = try { store?.let { LastKnownCar.find(address, list, it) } } catch (e: Exception) { null }
+            val r = readings.get(address)
+            val last = LastKnownCar.withReading(try { store?.let { LastKnownCar.find(address, list, it) } } catch (e: Exception) { null }, r)
             val battery = try { store?.let { CarHealth.batteryHistory(address, list, it) } } catch (e: Exception) { null }
             runOnUiThread {
                 if (!isDestroyed) {
                     trips = list
                     known = last
+                    reading = r
                     batteryHistory = battery.orEmpty()
                     render()
                 }
@@ -134,7 +162,7 @@ class CarActivity : Activity() {
         content.removeAllViews()
 
         val d = details.get(address)
-        val s = VehicleSummary.of(address, trips)
+        val s = VehicleSummary.of(address, trips, details = d, reading = reading)
         val log = events.list(address)
         val today = LocalDate.now()
         val odometer = widgets.currentOdometerKm(car, s, d)
@@ -202,6 +230,44 @@ class CarActivity : Activity() {
 
         // details
         content.addView(sectionHeader(tr("Details"), "i", "Car information") { showCarInfo(d, s) })
+        content.addView(liveBox)
+        liveKey = liveKeyNow()
+        fillLive(car, s, d)
+        content.addView(ui.card().apply {
+            addView(ui.body().apply { text = tr("VIN"); textSize = 13f; setTextColor(Colors.muted) })
+            addView(ui.body().apply {
+                text = d.vin ?: tr("Not set. Add it with Edit car.")
+                if (d.vin != null) { typeface = Typeface.MONOSPACE; textSize = 17f; letterSpacing = 0.05f } else setTextColor(Colors.muted)
+                setTextIsSelectable(true)
+            })
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.dp(8) })
+        renderRest(car, s, d, log, today, odometer)
+    }
+
+    /** Whether a trip of this car is being recorded now: then the page shows the car's values as they come in. */
+    private fun isLive(): Boolean {
+        val st = AppState.status
+        return st.phase != Phase.IDLE && st.carName == car?.name
+    }
+
+    /** Changes when the live part of the page has something new to show. */
+    private fun liveKeyNow(): Pair<Boolean, Long> = if (isLive()) true to AppState.car.lastUpdateMillis else false to 0L
+
+    /** Every [LIVE_MS] while the page is shown: redraws the odometer, fuel and doors when the car sent new values. */
+    private fun refreshLive() {
+        val c = car ?: return
+        val key = liveKeyNow()
+        if (key == liveKey) return
+        val wasLive = liveKey?.first == true
+        liveKey = key
+        if (wasLive && !key.first) { load(); return }          // the trip has ended (and is saved): read everything again
+        val d = details.get(address)
+        fillLive(c, VehicleSummary.of(address, trips, details = d, reading = reading), d)
+    }
+
+    /** The odometer and fuel tiles and the doors-and-windows card (with the 12 V battery and tyres in its corner). */
+    private fun fillLive(car: CarRef, s: VehicleSummary, d: CarDetails) {
+        liveBox.removeAllViews()
         fun split(text: String): Pair<String, String?> {                      // "50 030 km (live)" -> "50 030 km", "live"
             val i = text.indexOf(" (")
             return if (i < 0 || !text.endsWith(")")) text to null else text.substring(0, i) to text.substring(i + 2, text.length - 1)
@@ -223,7 +289,7 @@ class CarActivity : Activity() {
         } else {
             detailRow.addView(odoTile, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
         }
-        content.addView(detailRow)
+        liveBox.addView(detailRow)
         if (d.usesPlugin) {
             val doors = widgets.doorsStatus(car, known)
             val colour = when (doors.closed) {
@@ -248,22 +314,43 @@ class CarActivity : Activity() {
                 val note = doors.note ?: if (doors.closed == null) tr("Not reported yet. It is read from the car during and at the end of a trip.") else null
                 if (note != null) addView(ui.body().apply { text = note; textSize = 12f; setTextColor(Colors.subtle); setPadding(0, ui.dp(8), 0, 0) })
             }
-            content.addView(ui.card().apply {
+            val corner = healthCorner()
+            liveBox.addView(ui.card().apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = android.view.Gravity.CENTER_VERTICAL
                 addView(silhouette, LinearLayout.LayoutParams(ui.dp(84), ViewGroup.LayoutParams.WRAP_CONTENT))
                 addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = ui.dp(16) })
+                if (corner != null) addView(corner, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    gravity = android.view.Gravity.TOP
+                    leftMargin = ui.dp(8)
+                })
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.dp(8) })
         }
-        content.addView(ui.card().apply {
-            addView(ui.body().apply { text = tr("VIN"); textSize = 13f; setTextColor(Colors.muted) })
-            addView(ui.body().apply {
-                text = d.vin ?: tr("Not set. Add it with Edit car.")
-                if (d.vin != null) { typeface = Typeface.MONOSPACE; textSize = 17f; letterSpacing = 0.05f } else setTextColor(Colors.muted)
-                setTextIsSelectable(true)
-            })
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.dp(8) })
+    }
 
+    /**
+     * The top right corner of the doors card: the 12 V battery and the tyre pressure warning, live during a trip,
+     * otherwise as the latest trips reported them. Null when the car has reported neither.
+     */
+    private fun healthCorner(): View? {
+        val snap = if (isLive()) AppState.car.snapshot() else known?.snapshot
+        val battery = snap?.batteryPercent ?: batteryHistory.lastOrNull()?.percent
+        val tyres = snap?.tyrePressureWarning
+        if (battery == null && tyres == null) return null
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = android.view.Gravity.END
+            fun item(label: String, value: String, colour: Int, top: Int) {
+                addView(ui.body().apply { text = label; textSize = 12f; setTextColor(Colors.muted); gravity = android.view.Gravity.END; setPadding(0, top, 0, 0) })
+                addView(ui.body().apply { text = value; textSize = 15f; setTextColor(colour); setTypeface(typeface, Typeface.BOLD); gravity = android.view.Gravity.END })
+            }
+            battery?.let { item(tr("12 V battery"), tr("{0} %", ui.f0(it)), if (CarHealth.isLow(it)) Colors.warn else Colors.good, 0) }
+            tyres?.let { item(tr("Tyres"), if (it) tr("Warning") else tr("OK"), if (it) Colors.warn else Colors.good, if (battery != null) ui.dp(8) else 0) }
+        }
+    }
+
+    /** Everything below the details: trips, where the car is parked, reminders and the service log. */
+    private fun renderRest(car: CarRef, s: VehicleSummary, d: CarDetails, log: List<CarEvent>, today: LocalDate, odometer: Double?) {
         // trips
         val mine = trips.filter { it.carId.equals(address, ignoreCase = true) }          // newest first
         content.addView(sectionHeader(tr("Trips"), "›", "All trips of this car") {
@@ -596,6 +683,7 @@ class CarActivity : Activity() {
             form.addView(caption(tr("Data from the plugin")))
             val source = when {
                 live -> tr("Live: a trip is in progress")
+                known?.fromReading == true -> tr("Last read from the car on {0}", ui.dateTime(known!!.atMs))
                 known != null -> tr("As reported at the end of the trip on {0}", ui.date(known!!.atMs))
                 else -> tr("Nothing received yet: it appears after the first trip with the plugin")
             }
@@ -853,6 +941,7 @@ class CarActivity : Activity() {
                 store.reassignCar(old.address, target.address, target.name)
                 details.moveCar(old.address, target.address)
                 events.moveCar(old.address, target.address)
+                readings.moveCar(old.address, target.address)
                 Prefs.replaceCar(this, old.address, target)
             } catch (e: IOException) {
                 error = e.message ?: e.toString()
@@ -884,6 +973,7 @@ class CarActivity : Activity() {
                 d.allPhotos.forEach { PhotoStore.delete(this, it) }
                 try { details.remove(address) } catch (e: IOException) { /* the entry stays unused */ }
                 try { events.removeCar(address) } catch (e: IOException) { /* likewise */ }
+                try { readings.remove(address) } catch (e: IOException) { /* likewise */ }
                 this.car = null
                 finish()
             }
@@ -1093,6 +1183,8 @@ class CarActivity : Activity() {
 
     companion object {
         const val EXTRA_ADDRESS = "address"
+        /** How often the page looks for new car values while a trip runs. */
+        private const val LIVE_MS = 2_000L
         private const val REQ_PHOTO = 3
     }
 }
