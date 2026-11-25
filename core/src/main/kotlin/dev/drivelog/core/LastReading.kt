@@ -34,6 +34,7 @@ data class LastReading(val values: CarValues, val atMs: Long) {
                     openParts = n.openParts ?: o.openParts,
                     batteryPercent = n.batteryPercent ?: o.batteryPercent,
                     tyrePressureWarning = n.tyrePressureWarning ?: o.tyrePressureWarning,
+                    avgSpeedKmh = n.avgSpeedKmh ?: o.avgSpeedKmh,
                 ),
                 maxOf(old.atMs, new.atMs),
             )

@@ -93,8 +93,19 @@ object Notifications {
         post(context, ID_ALERT, title, text, openApp(context))
     }
 
-    fun tripResult(context: Context, text: String) {
-        post(context, ID_RESULT, tr("Trip finished"), text, openApp(context), CHANNEL_TRIP)
+    /**
+     * The trip has ended. With [tripId] (a saved trip) the notification has a button that marks it as business for the mileage log (trips are private otherwise), without opening the app ([TripKindReceiver]).
+     */
+    fun tripResult(context: Context, text: String, tripId: String? = null) {
+        // trips are private unless marked otherwise, so only "business" needs a button
+        val actions = if (tripId == null) emptyList() else listOf(dev.drivelog.core.TripKind.BUSINESS).map { kind ->
+            val intent = Intent(context, TripKindReceiver::class.java)
+                .putExtra(TripKindReceiver.EXTRA_TRIP, tripId)
+                .putExtra(TripKindReceiver.EXTRA_KIND, kind.name)
+            val pending = PendingIntent.getBroadcast(context, kind.ordinal + 10, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            Notification.Action.Builder(null, tr("Mark as business"), pending).build()
+        }
+        post(context, ID_RESULT, tr("Trip finished"), text, openApp(context), CHANNEL_TRIP, actions)
     }
 
     /** A reminder about a car; tapping it opens that car's screen. [carAddress] null only for the settings test. */
@@ -116,7 +127,10 @@ object Notifications {
         post(context, id, title, text, tap, CHANNEL_ALERT)
     }
 
-    private fun post(context: Context, id: Int, title: String, text: String, tap: PendingIntent, channel: String = CHANNEL_ALERT) {
+    private fun post(
+        context: Context, id: Int, title: String, text: String, tap: PendingIntent, channel: String = CHANNEL_ALERT,
+        actions: List<Notification.Action> = emptyList(),
+    ) {
         try {
             ensureChannels(context)
             val n = Notification.Builder(context, channel)
@@ -126,6 +140,7 @@ object Notifications {
                 .setStyle(Notification.BigTextStyle().bigText(text))
                 .setContentIntent(tap)
                 .setAutoCancel(true)
+                .apply { actions.forEach { addAction(it) } }
                 .build()
             context.getSystemService(NotificationManager::class.java).notify(id, n)
         } catch (e: SecurityException) {

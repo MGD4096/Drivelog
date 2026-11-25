@@ -30,6 +30,15 @@ data class CarValues(
     val batteryPercent: Double? = null,
     /** True while the car warns about tyre pressure, false when it reports no warning. */
     val tyrePressureWarning: Boolean? = null,
+    /** Speed the car measures, km/h (0 = standing). */
+    val speedKmh: Double? = null,
+    /** The trip computer's average speed, km/h. */
+    val avgSpeedKmh: Double? = null,
+    /**
+     * Fuel burnt so far, litres, as a running total that only grows while the plugin is connected (it may start again
+     * from 0 when the plugin restarts). Drivelog uses the growth during a trip, never the number itself.
+     */
+    val fuelUsedTotalL: Double? = null,
 ) {
     /**
      * The same values with everything implausible dropped (another app sends them, so they are not trusted): numbers
@@ -45,6 +54,9 @@ data class CarValues(
         openParts = openParts?.filter { isPartLabel(it) }?.distinct()?.take(PART_LABELS.size),
         batteryPercent = batteryPercent.within(0.0, 100.0),
         tyrePressureWarning = tyrePressureWarning,
+        speedKmh = speedKmh?.takeIf { !it.isNaN() && it >= 0.0 && it <= 400.0 },
+        avgSpeedKmh = avgSpeedKmh.within(0.0, 400.0),
+        fuelUsedTotalL = fuelUsedTotalL?.takeIf { !it.isNaN() && !it.isInfinite() && it >= 0.0 && it < 1_000_000.0 },
     )
 
     companion object {
@@ -71,6 +83,7 @@ data class CarValues(
                 "odometerKm" to v.odometerKm, "fuelLiters" to v.fuelLiters, "rangeKm" to v.rangeKm,
                 "avgConsumptionKmPerL" to v.avgConsumptionKmPerL, "outsideC" to v.outsideC, "insideC" to v.insideC,
                 "openParts" to v.openParts, "batteryPercent" to v.batteryPercent, "tyrePressureWarning" to v.tyrePressureWarning,
+                "speedKmh" to v.speedKmh, "avgSpeedKmh" to v.avgSpeedKmh, "fuelUsedTotalL" to v.fuelUsedTotalL,
             ).filterValues { it != null }
         )
 
@@ -83,6 +96,7 @@ data class CarValues(
                 avgConsumptionKmPerL = num("avgConsumptionKmPerL"), outsideC = num("outsideC"), insideC = num("insideC"),
                 openParts = (o["openParts"] as? List<*>)?.filterIsInstance<String>(),
                 batteryPercent = num("batteryPercent"), tyrePressureWarning = o["tyrePressureWarning"] as? Boolean,
+                speedKmh = num("speedKmh"), avgSpeedKmh = num("avgSpeedKmh"), fuelUsedTotalL = num("fuelUsedTotalL"),
             )
         }
     }

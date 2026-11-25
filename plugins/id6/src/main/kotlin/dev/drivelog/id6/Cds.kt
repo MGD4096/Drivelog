@@ -21,10 +21,14 @@ object CdsProperty {
     const val WINDOW_PASSENGER_REAR = "controls.windowPassengerRear"
     const val BATTERY = "sensors.battery"
     const val TYRE_PRESSURE = "sensors.tirePressureWarning"
+    const val SPEED = "driving.speedActual"
+    const val AVG_SPEED = "driving.averageSpeed"
+    const val FUEL_COUNTER = "engine.consumption"
 
     val ALL: Set<String> = setOf(
         ODOMETER, FUEL, AVG_CONSUMPTION, TEMP_OUTSIDE, TEMP_INSIDE, DOORS, TRUNK, LID, SUNROOF,
         WINDOW_DRIVER_FRONT, WINDOW_PASSENGER_FRONT, WINDOW_DRIVER_REAR, WINDOW_PASSENGER_REAR, BATTERY, TYRE_PRESSURE,
+        SPEED, AVG_SPEED, FUEL_COUNTER,
     )
 }
 
@@ -38,6 +42,9 @@ class CdsState(private val clock: () -> Long = System::currentTimeMillis) {
 
     private val raw = ConcurrentHashMap<String, String>()
 
+    /** The fuel counter added up across its wrap-arounds ([FuelCounter]); starts again with [reset]. */
+    private val fuel = FuelCounter()
+
     @Volatile var lastUpdateMillis: Long = 0L
         private set
 
@@ -50,16 +57,18 @@ class CdsState(private val clock: () -> Long = System::currentTimeMillis) {
             return Result.IGNORED_BAD_VALUE
         }
         raw[name] = value
+        if (name == CdsProperty.FUEL_COUNTER) fuel.add(CdsParser.fuelCounter(value))
         lastUpdateMillis = clock()
         synchronized(this) { version++ }
         return Result.STORED
     }
 
     /** The neutral values for Drivelog. */
-    fun values(): CarValues = CdsParser.toCarValues(HashMap(raw))
+    fun values(): CarValues = CdsParser.toCarValues(HashMap(raw)).copy(fuelUsedTotalL = fuel.liters())
 
     fun reset() {
         raw.clear()
+        fuel.reset()
         lastUpdateMillis = 0L
         synchronized(this) { version++ }
     }
@@ -87,7 +96,22 @@ object CdsParser {
             openParts = openParts(::obj),
             batteryPercent = num(obj(CdsProperty.BATTERY)?.get("battery"))?.takeIf { it > 0 && it <= 100 },
             tyrePressureWarning = tyreWarning(sub(obj(CdsProperty.TYRE_PRESSURE), "tirePressureWarning")),
+            speedKmh = num(obj(CdsProperty.SPEED)?.get("speedActual"))?.takeIf { it >= 0 && it < 400 },
+            avgSpeedKmh = avgSpeed(sub(obj(CdsProperty.AVG_SPEED), "averageSpeed")),
         )
+    }
+
+    /** The raw step count of `engine.consumption`, or null. */
+    fun fuelCounter(value: String): Long? =
+        num(Json.parseObject(value)?.get("consumption"))?.takeIf { it >= 0 && it < FuelCounter.WRAP }?.toLong()
+
+    /** The trip computer's average speed: `averageSpeed2` (as for consumption) or `1`; unit 1 = km/h, 2 = mph. */
+    private fun avgSpeed(o: Map<String, Any?>?): Double? {
+        if (o == null) return null
+        fun value(key: String) = (o[key] as? Double)?.takeIf { !it.isNaN() && it > 0 }
+        val v = value("averageSpeed2") ?: value("averageSpeed1") ?: return null
+        val kmh = if ((o["unit"] as? Double)?.toInt() == 2) v * 1.609344 else v
+        return kmh.takeIf { it < 400 }
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -175,5 +199,46 @@ object CdsParser {
         if (states.isEmpty()) return null
         return states.filterValues { it != Opening.CLOSED }
             .map { (label, s) -> if (s == Opening.TILTED) label + CarValues.TILTED else label }
+    }
+}
+
+/**
+ * `engine.consumption` is a counter that grows while the engine burns fuel and starts again at 0 after 65535
+ * (about 2 values a second). This adds up the steps between values; a jump bigger than [MAX_STEP] (a gap in the
+ * connection) is skipped rather than guessed.
+ *
+ * [LITERS_PER_STEP] is an estimate from one measurement (about 30 000 steps in 55 s of cold idling, which is 2 l/h at
+ * 1 µl a step): not checked against a full tank yet. Drivelog compares the total with the tank level over many trips and
+ * corrects it.
+ */
+class FuelCounter {
+    private var last: Long? = null
+    private var steps = 0L
+
+    @Synchronized
+    fun add(counter: Long?) {
+        if (counter == null) return
+        val before = last
+        last = counter
+        if (before == null) return
+        val delta = (counter - before + WRAP) % WRAP
+        if (delta in 1..MAX_STEP) steps += delta
+    }
+
+    /** Litres since the start; null before two values have arrived. */
+    @Synchronized
+    fun liters(): Double? = if (last == null) null else steps * LITERS_PER_STEP
+
+    @Synchronized
+    fun reset() {
+        last = null
+        steps = 0L
+    }
+
+    companion object {
+        const val WRAP = 65_536L
+        /** About 4 s of full throttle at the estimated step size: more than that between two values is a gap. */
+        const val MAX_STEP = 30_000L
+        const val LITERS_PER_STEP = 1e-6
     }
 }

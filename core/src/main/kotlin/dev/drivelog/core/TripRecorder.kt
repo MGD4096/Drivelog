@@ -29,6 +29,7 @@ class TripRecorder(
     private var startMs = 0L
     private var startCar = CarSnapshot.EMPTY
     private var lastCar = CarSnapshot.EMPTY
+    private var totals = DriveTotals.NONE
     private var recording = false
     private val points = ArrayList<TrackPoint>()
     private val samples = ArrayList<CarSample>()
@@ -45,6 +46,7 @@ class TripRecorder(
         startMs = nowMs
         startCar = car
         lastCar = car
+        totals = DriveTotals.NONE
         recording = true
         recordSample(nowMs, car)
     }
@@ -80,6 +82,11 @@ class TripRecorder(
         recordSample(nowMs, car)
     }
 
+    /** What the car's speed and fuel counter added up to so far ([CarState.totals]). */
+    fun onTotals(t: DriveTotals) {
+        if (recording) totals = t
+    }
+
     private fun recordSample(nowMs: Long, car: CarSnapshot) {
         val sample = CarSample(nowMs, car.odometerKm, car.fuelLiters, car.outsideC, car.insideC)
         val last = samples.lastOrNull()
@@ -99,6 +106,7 @@ class TripRecorder(
         samples = samples.toList(),
         startCar = startCar,
         endCar = lastCar,
+        carTotals = totals,
     )
 
     fun liveSummary(nowMs: Long): TripSummary = TripStats.summarize(snapshotTrip(nowMs))

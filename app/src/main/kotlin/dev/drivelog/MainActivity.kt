@@ -242,6 +242,8 @@ class MainActivity : Activity() {
         content.addView(tripsSummary)
         tripsTiles = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         content.addView(tripsTiles)
+        content.addView(ui.pill(tr("Statistics by month")) { startActivity(Intent(this, StatsActivity::class.java)) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.dp(8) })
         tripsBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         content.addView(tripsBox)
         return scrolling(content)
@@ -272,6 +274,27 @@ class MainActivity : Activity() {
             ui.pill(tr("Stop and save")) { TripService.stop(this) },
         ), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.dp(10) })
         content.addView(recording)
+
+        content.addView(ui.heading(tr("Mileage log")))
+        val mileage = ui.card()
+        val driverButton = ui.pill("") {}
+        fun showDriver() { driverButton.text = tr("Driver: {0}", AppSettings.driver(this) ?: tr("not set")) }
+        showDriver()
+        driverButton.setOnClickListener {
+            val input = android.widget.EditText(this).apply { setText(AppSettings.driver(this@MainActivity) ?: ""); hint = tr("Name and surname"); setSingleLine() }
+            android.app.AlertDialog.Builder(this)
+                .setTitle(tr("Driver"))
+                .setView(LinearLayout(this).apply { setPadding(ui.dp(20), ui.dp(8), ui.dp(20), 0); addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)) })
+                .setPositiveButton(tr("Save")) { _, _ -> AppSettings.setDriver(this, input.text.toString().trim().ifEmpty { null }); showDriver() }
+                .setNegativeButton(tr("Cancel"), null)
+                .show()
+        }
+        mileage.addView(driverButton)
+        mileage.addView(ui.body().apply {
+            text = tr("Filled in as the driver of every new trip. Trips count as private unless marked as business: from the \"Trip finished\" notification or in the trip. The log of a car is exported from its page.")
+            textSize = 13f; setTextColor(Colors.muted); setPadding(0, ui.dp(8), 0, ui.dp(4))
+        })
+        content.addView(mileage)
 
         content.addView(ui.heading(tr("Reminders")))
         val reminders = ui.card()

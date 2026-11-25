@@ -16,6 +16,8 @@ data class TripMeta(
     val startMs: Long,
     val endMs: Long,
     val summary: TripSummary,
+    /** The same as [Trip.log]. */
+    val log: TripLog = TripLog(),
 )
 
 object TripJson {
@@ -33,6 +35,12 @@ object TripJson {
             "endMs" to trip.endMs,
             "startCar" to carToMap(trip.startCar),
             "endCar" to carToMap(trip.endCar),
+            "log" to trip.log.toMap(),
+            "carTotals" to linkedMapOf(
+                "maxSpeedKmh" to trip.carTotals.maxSpeedKmh,
+                "movingMs" to trip.carTotals.movingMs,
+                "counterFuelL" to trip.carTotals.counterFuelL,
+            ),
             "samples" to trip.samples.map { listOf(it.timeMs, it.odometerKm, it.fuelLiters, it.outsideC, it.insideC) },
             "points" to trip.points.map { listOf(it.timeMs, it.lat, it.lon, it.altitudeM, it.speedMps, it.accuracyM) },
         )
@@ -50,6 +58,10 @@ object TripJson {
                 endMs = (o["endMs"] as Double).toLong(),
                 startCar = carFromMap(o["startCar"]),
                 endCar = carFromMap(o["endCar"]),
+                log = TripLog.fromMap(o["log"]),
+                carTotals = (o["carTotals"] as? Map<*, *>)?.let { t ->
+                    DriveTotals(t["maxSpeedKmh"] as? Double, (t["movingMs"] as? Double)?.toLong() ?: 0L, t["counterFuelL"] as? Double)
+                } ?: DriveTotals.NONE,
                 samples = (o["samples"] as List<*>).map { row ->
                     val r = row as List<*>
                     CarSample((r[0] as Double).toLong(), num(r, 1), num(r, 2), num(r, 3), num(r, 4))
@@ -80,6 +92,7 @@ object TripJson {
         "openParts" to c.openParts,
         "batteryPercent" to c.batteryPercent,
         "tyrePressureWarning" to c.tyrePressureWarning,
+        "avgSpeedKmh" to c.avgSpeedKmh,
     )
 
     private fun carFromMap(any: Any?): CarSnapshot {
@@ -94,6 +107,7 @@ object TripJson {
             openParts = (m["openParts"] as? List<*>)?.filterIsInstance<String>(),
             batteryPercent = m["batteryPercent"] as? Double,
             tyrePressureWarning = m["tyrePressureWarning"] as? Boolean,
+            avgSpeedKmh = m["avgSpeedKmh"] as? Double,
         )
     }
 
@@ -109,6 +123,7 @@ object TripJson {
                 "carName" to meta.carName,
                 "startMs" to meta.startMs,
                 "endMs" to meta.endMs,
+                "log" to meta.log.toMap(),
                 "summary" to linkedMapOf(
                     "durationMs" to s.durationMs,
                     "distanceKm" to s.distanceKm,
@@ -129,6 +144,9 @@ object TripJson {
                     "startLon" to s.startLon,
                     "endLat" to s.endLat,
                     "endLon" to s.endLon,
+                    "counterFuelL" to s.counterFuelL,
+                    "carAvgSpeedKmh" to s.carAvgSpeedKmh,
+                    "speedFromCar" to s.speedFromCar,
                 ),
             )
         )
@@ -145,6 +163,7 @@ object TripJson {
                 carName = o["carName"] as String,
                 startMs = (o["startMs"] as Double).toLong(),
                 endMs = (o["endMs"] as Double).toLong(),
+                log = TripLog.fromMap(o["log"]),
                 summary = TripSummary(
                     durationMs = (s["durationMs"] as Double).toLong(),
                     distanceKm = s["distanceKm"] as Double,
@@ -165,6 +184,9 @@ object TripJson {
                     startLon = d("startLon"),
                     endLat = d("endLat"),
                     endLon = d("endLon"),
+                    counterFuelL = d("counterFuelL"),
+                    carAvgSpeedKmh = d("carAvgSpeedKmh"),
+                    speedFromCar = s["speedFromCar"] as? Boolean ?: false,
                 ),
             )
         } catch (e: ClassCastException) {
@@ -186,7 +208,7 @@ class FileTripStore(private val dir: File) {
     }
 
     fun save(trip: Trip): TripMeta {
-        val meta = TripMeta(trip.id, trip.carId, trip.carName, trip.startMs, trip.endMs, TripStats.summarize(trip))
+        val meta = TripMeta(trip.id, trip.carId, trip.carName, trip.startMs, trip.endMs, TripStats.summarize(trip), trip.log.cleaned())
         writeAtomically(File(dir, "${trip.id}$TRIP_SUFFIX"), TripJson.toJson(trip))
         writeAtomically(File(dir, "${trip.id}$META_SUFFIX"), TripJson.metaToJson(meta))   // last: its presence means "complete"
         return meta
@@ -202,6 +224,13 @@ class FileTripStore(private val dir: File) {
         if (!validId(id)) return null
         val f = File(dir, "$id$TRIP_SUFFIX")
         return try { if (f.isFile) TripJson.fromJson(f.readText()) else null } catch (e: IOException) { null }
+    }
+
+    /** Changes the mileage-log details of a saved trip. Returns the new summary, or null when there is no such trip. */
+    @Throws(IOException::class)
+    fun updateLog(id: String, log: TripLog): TripMeta? {
+        val trip = load(id) ?: return null
+        return save(trip.copy(log = log.cleaned()))
     }
 
     fun delete(id: String) {

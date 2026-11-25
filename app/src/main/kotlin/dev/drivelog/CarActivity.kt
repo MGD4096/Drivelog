@@ -35,6 +35,9 @@ import dev.drivelog.core.EventType
 import dev.drivelog.core.FileCarDetailsStore
 import dev.drivelog.core.FileCarEventsStore
 import dev.drivelog.core.FileLastReadingStore
+import dev.drivelog.core.FileFuelStore
+import dev.drivelog.core.FuelEntry
+import dev.drivelog.core.CounterFuel
 import dev.drivelog.core.LastReading
 import dev.drivelog.core.FileTripStore
 import dev.drivelog.core.LastKnownCar
@@ -72,6 +75,10 @@ class CarActivity : Activity() {
     /** The latest values the car sent, saved apart from the trips. */
     private var reading: LastReading? = null
     private val readings by lazy { FileLastReadingStore(File(filesDir, FileLastReadingStore.FILE_NAME)) }
+    private val fuelStore by lazy { FileFuelStore(File(filesDir, FileFuelStore.FILE_NAME)) }
+    private val fuelPanel by lazy { FuelPanel(this, ui, fuelStore) }
+    /** This car's refuellings, newest first. */
+    private var fuelEntries: List<FuelEntry> = emptyList()
     /** The 12 V battery at the start of the latest trips, oldest first. */
     private var batteryHistory: List<CarHealth.BatteryReading> = emptyList()
     private var photoCallback: ((List<Uri>) -> Unit)? = null
@@ -134,6 +141,7 @@ class CarActivity : Activity() {
             val store = try { FileTripStore(File(filesDir, "trips")) } catch (e: IOException) { null }
             val list = try { store?.list() ?: emptyList() } catch (e: Exception) { emptyList() }
             val r = readings.get(address)
+            val fuel = try { fuelStore.list(address) } catch (e: Exception) { emptyList() }
             val last = LastKnownCar.withReading(try { store?.let { LastKnownCar.find(address, list, it) } } catch (e: Exception) { null }, r)
             val battery = try { store?.let { CarHealth.batteryHistory(address, list, it) } } catch (e: Exception) { null }
             runOnUiThread {
@@ -141,6 +149,7 @@ class CarActivity : Activity() {
                     trips = list
                     known = last
                     reading = r
+                    fuelEntries = fuel
                     batteryHistory = battery.orEmpty()
                     render()
                 }
@@ -365,7 +374,7 @@ class CarActivity : Activity() {
             cells += statCell(ui.f1(last.summary.distanceKm), tr("km"))
             cells += statCell(ui.duration(last.summary.durationMs), tr("time"))
             last.summary.maxSpeedKmh?.let { cells += statCell(ui.f0(it), tr("top km/h")) }
-            last.summary.consumptionLPer100Km?.let { cells += statCell(ui.f1(it), tr("L/100 km")) }
+            CounterFuel.consumption(last.summary, CounterFuel.factor(mine))?.let { (v, counter) -> cells += statCell(ui.f1(v) + if (counter) "*" else "", tr("L/100 km")) }
             content.addView(ui.card().apply {
                 addView(ui.body().apply { text = tr("Last trip  ·  {0}", ui.dateTime(last.startMs)); setTextColor(Colors.subtle); textSize = 13f })
                 addView(LinearLayout(this@CarActivity).apply {
@@ -374,6 +383,21 @@ class CarActivity : Activity() {
                     for (c in cells) addView(c, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                 })
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.dp(8) })
+        }
+        content.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(ui.pill(tr("Mileage log")) { MileageExport(this@CarActivity, ui, io).start(car) }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { rightMargin = ui.dp(4) })
+            addView(ui.pill(tr("Statistics")) { startActivity(Intent(this@CarActivity, StatsActivity::class.java).putExtra(EXTRA_ADDRESS, address)) },
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = ui.dp(4) })
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.dp(8) })
+
+        // fuel
+        if (d.usesPlugin || fuelEntries.isNotEmpty()) {
+            content.addView(sectionHeader(tr("Fuel log"), "+", "Add a refuelling") { fuelPanel.edit(address, null, null, odometer) { load() } })
+            content.addView(fuelPanel.build(address, mine, fuelEntries, log, today.year) { load() })
+        } else {
+            content.addView(sectionHeader(tr("Fuel log"), "+", "Add a refuelling") { fuelPanel.edit(address, null, null, odometer) { load() } })
+            content.addView(ui.body().apply { text = tr("Add a refuelling with its price to see the real consumption and what a kilometre costs."); setTextColor(Colors.muted) })
         }
 
         // parked
@@ -703,6 +727,8 @@ class CarActivity : Activity() {
             row(tr("Average consumption"), snap?.avgConsumptionKmPerL?.takeIf { it > 0 }?.let { "${ui.f1(100.0 / it)} L/100 km" })
             row(tr("Outside temperature"), snap?.outsideC?.let { "${ui.f1(it)} °C" })
             row(tr("Inside temperature"), snap?.insideC?.let { "${ui.f1(it)} °C" })
+            row(tr("Speed"), snap?.speedKmh?.takeIf { live }?.let { tr("{0} km/h", ui.f0(it)) })
+            row(tr("Average speed (trip computer)"), snap?.avgSpeedKmh?.let { tr("{0} km/h", ui.f0(it)) })
             val battery = snap?.batteryPercent ?: batteryHistory.lastOrNull()?.percent
             row(tr("12 V battery"), battery?.let { tr("{0} %", ui.f0(it)) + if (CarHealth.isLow(it)) " · " + tr("low") else "" })
             row(tr("Battery over the latest trips"), CarHealth.trendText(batteryHistory))
@@ -744,6 +770,7 @@ class CarActivity : Activity() {
         val modelField = field("", old.model, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS)
         val yearField = field("", old.year?.toString(), InputType.TYPE_CLASS_NUMBER, 4)
         val engineField = field("", old.engineCc?.let { "$it cc" }, InputType.TYPE_CLASS_TEXT, 12)
+        val plateField = field("", old.plate, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, 12)
         val vinField = field(
             "", old.vin,
             InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, 24,
@@ -818,6 +845,7 @@ class CarActivity : Activity() {
                 addView(labelled(tr("Engine"), engineField, tr("3.0 or 2998 cc")), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.dp(6) })
             addView(labelled(tr("VIN (17 characters)"), vinField, tr("optional")), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.dp(6) })
+            addView(labelled(tr("Registration number (for the mileage log)"), plateField, tr("optional")), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.dp(6) })
             addView(caption(tr("Data source")))
             addView(sourceRow)
             addView(hint)
@@ -848,6 +876,7 @@ class CarActivity : Activity() {
                 var updated = details.get(address).copy(
                     vin = vin.value, model = modelField.text.toString().trim().ifEmpty { null }, year = year.value, engineCc = engine.value,
                     usesPlugin = pluginOn,
+                    plate = plateField.text.toString().trim().uppercase().ifEmpty { null },
                     plugin = if (pluginOn) plugins[pluginIndex.coerceIn(0, plugins.size - 1)].id else old.plugin,
                 )
                 // The typed reading counts as entered now when it was changed here; with a plugin it is left alone
@@ -942,6 +971,7 @@ class CarActivity : Activity() {
                 details.moveCar(old.address, target.address)
                 events.moveCar(old.address, target.address)
                 readings.moveCar(old.address, target.address)
+                fuelStore.moveCar(old.address, target.address)
                 Prefs.replaceCar(this, old.address, target)
             } catch (e: IOException) {
                 error = e.message ?: e.toString()
@@ -974,6 +1004,7 @@ class CarActivity : Activity() {
                 try { details.remove(address) } catch (e: IOException) { /* the entry stays unused */ }
                 try { events.removeCar(address) } catch (e: IOException) { /* likewise */ }
                 try { readings.remove(address) } catch (e: IOException) { /* likewise */ }
+                try { fuelStore.removeCar(address) } catch (e: IOException) { /* likewise */ }
                 this.car = null
                 finish()
             }

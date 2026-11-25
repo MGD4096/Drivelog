@@ -13,6 +13,8 @@ object AppSettings {
     private const val KEY_NOTIFIED = "reminders_notified"
     private const val KEY_LANGUAGE = "language"
     private const val KEY_THEME = "theme"
+    private const val KEY_DRIVER = "driver"
+    private const val KEY_DISMISSED_REFUELS = "dismissed_refuels"
 
     val DAY_CHOICES = listOf(3, 7, 14, 21, 30, 45, 60)
     val KM_CHOICES = listOf(500, 1000, 1500, 2000, 3000, 5000)
@@ -50,6 +52,17 @@ object AppSettings {
         // Dates and numbers: the phone's own style, unless a language was picked here
         java.util.Locale.setDefault(if (language(c) == Lang.SYSTEM) phone else java.util.Locale(code, if (code == "pl") "PL" else ""))
     }
+
+    /** The driver's name for the mileage log: filled in for new entries; null when never set. */
+    fun driver(c: Context): String? = prefs(c).getString(KEY_DRIVER, null)?.takeIf { it.isNotBlank() }
+
+    fun setDriver(c: Context, name: String?) = prefs(c).edit().putString(KEY_DRIVER, name?.trim()).apply()
+
+    /** Detected refuellings the person said were not worth an entry ([dev.drivelog.core.DetectedRefuel.key]). */
+    fun dismissedRefuels(c: Context): Set<String> = prefs(c).getStringSet(KEY_DISMISSED_REFUELS, emptySet())?.toSet() ?: emptySet()
+
+    fun dismissRefuel(c: Context, key: String) =
+        prefs(c).edit().putStringSet(KEY_DISMISSED_REFUELS, HashSet(dismissedRefuels(c).toList().takeLast(200) + key)).apply()
 
     /** Which reminder stages have been announced already (see ReminderPlanner). */
     fun notified(c: Context): Set<String> = prefs(c).getStringSet(KEY_NOTIFIED, emptySet())?.toSet() ?: emptySet()

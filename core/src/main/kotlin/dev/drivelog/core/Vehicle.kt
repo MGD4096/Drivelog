@@ -46,6 +46,8 @@ data class CarDetails(
     val parkedLat: Double? = null,
     val parkedLon: Double? = null,
     val parkedAtMs: Long? = null,
+    /** Registration number, for the mileage log. */
+    val plate: String? = null,
 ) {
     val isEmpty: Boolean get() = this == CarDetails()
 
@@ -403,6 +405,7 @@ class FileCarDetailsStore(private val file: File) {
                 parkedLat = (m["parkedLat"] as? Double)?.takeIf { it in -90.0..90.0 },
                 parkedLon = (m["parkedLon"] as? Double)?.takeIf { it in -180.0..180.0 },
                 parkedAtMs = (m["parkedAtMs"] as? Double)?.toLong(),
+                plate = (m["plate"] as? String)?.takeIf { it.isNotBlank() },
             )
         }
         return out
@@ -448,6 +451,7 @@ class FileCarDetailsStore(private val file: File) {
                 d.manualOdometerKm?.let { m["manualOdometerKm"] = it }
                 d.manualOdometerAtMs?.let { m["manualOdometerAtMs"] = it.toDouble() }
                 if (d.archived) m["archived"] = true
+                d.plate?.let { m["plate"] = it }
                 if (d.parkedLat != null && d.parkedLon != null && d.parkedAtMs != null) {
                     m["parkedLat"] = d.parkedLat
                     m["parkedLon"] = d.parkedLon

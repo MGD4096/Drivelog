@@ -70,6 +70,18 @@
 
 
         <activity android:name=".MapActivity" android:exported="false" />
+        <activity android:name=".StatsActivity" android:exported="false" />
+
+        <!-- The Business / Private buttons of the "Trip finished" notification. -->
+        <receiver android:name=".TripKindReceiver" android:exported="false" />
+
+        <!-- The home-screen widget. Exported because the launcher sends it APPWIDGET_UPDATE (a system broadcast). -->
+        <receiver android:name=".CarWidget" android:exported="true" android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_car_info" />
+        </receiver>
 
         <service
             android:name=".ReminderJobService"

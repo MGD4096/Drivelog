@@ -35,6 +35,10 @@ data class Trip(
     val samples: List<CarSample>,
     val startCar: CarSnapshot,
     val endCar: CarSnapshot,
+    /** Added up from the car's own speed and fuel counter (plugin), when it sends them. */
+    val carTotals: DriveTotals = DriveTotals.NONE,
+    /** Business or private, purpose, route and driver, for the mileage log ([MileageLog]). */
+    val log: TripLog = TripLog(),
 )
 
 data class TripSummary(
@@ -61,6 +65,12 @@ data class TripSummary(
     val startLon: Double?,
     val endLat: Double?,
     val endLon: Double?,
+    /** Fuel burnt according to the car's fuel counter, before calibration ([CounterFuel]). */
+    val counterFuelL: Double? = null,
+    /** The trip computer's average speed at the end of the trip. */
+    val carAvgSpeedKmh: Double? = null,
+    /** [maxSpeedKmh] and [movingTimeMs] come from the car's speed rather than from GPS. */
+    val speedFromCar: Boolean = false,
 )
 
 object TripStats {
@@ -133,16 +143,21 @@ object TripStats {
             fuelUsed / distanceKm * 100.0
         } else null
 
-        val movingKmh = if (movingMs > 0) gpsKm / (movingMs / 3_600_000.0) else null
+        // The car's own speed, when the plugin sends it, does not lose tunnels and garages; GPS is the fallback
+        val car = trip.carTotals
+        val speedFromCar = car.maxSpeedKmh != null && car.movingMs > 0
+        val moving = if (speedFromCar) car.movingMs else movingMs
+        val movingKmh = if (speedFromCar) distanceKm / (moving / 3_600_000.0)
+            else if (movingMs > 0) gpsKm / (movingMs / 3_600_000.0) else null
 
         return TripSummary(
             durationMs = max(0L, trip.endMs - trip.startMs),
             distanceKm = distanceKm,
             gpsDistanceKm = gpsKm,
             odometerDistanceKm = odoKm,
-            movingTimeMs = movingMs,
+            movingTimeMs = moving,
             avgMovingSpeedKmh = movingKmh,
-            maxSpeedKmh = maxKmh,
+            maxSpeedKmh = if (speedFromCar) car.maxSpeedKmh else maxKmh,
             startOdometerKm = odoFirst,
             endOdometerKm = odoLast,
             startFuelL = fuels.firstOrNull(),
@@ -155,9 +170,44 @@ object TripStats {
             startLon = pts.firstOrNull()?.lon,
             endLat = pts.lastOrNull()?.lat,
             endLon = pts.lastOrNull()?.lon,
+            counterFuelL = car.counterFuelL?.takeIf { it > 0 },
+            carAvgSpeedKmh = trip.endCar.avgSpeedKmh,
+            speedFromCar = speedFromCar,
         )
     }
 
     /** Short trips (moving the car in a car park, a Bluetooth glitch) are not worth keeping. */
     fun isWorthKeeping(summary: TripSummary): Boolean = summary.distanceKm >= 0.2
+}
+
+/**
+ * Consumption from the car's fuel counter, for trips too short for the tank level (whole litres) to say anything. The
+ * counter's unit is only estimated in the plugin, so it is scaled by how the counter compared with the tank level over
+ * the car's earlier trips ([factor]).
+ */
+object CounterFuel {
+    /** Tank-level litres the comparison needs before it is trusted. */
+    const val MIN_TANK_LITERS = 20.0
+    const val MIN_KM = 1.0
+
+    /** Tank litres per counter litre over the trips with both; 1.0 until there is enough to compare. */
+    fun factor(trips: List<TripMeta>): Double {
+        val both = trips.map { it.summary }.filter { it.consumptionLPer100Km != null && it.fuelUsedL != null && (it.counterFuelL ?: 0.0) > 0 }
+        val tank = both.sumOf { it.fuelUsedL!! }
+        val counter = both.sumOf { it.counterFuelL!! }
+        if (tank < MIN_TANK_LITERS || counter <= 0) return 1.0
+        return (tank / counter).coerceIn(0.25, 4.0)
+    }
+
+    /** L/100 km: the tank level's when it has one, otherwise the counter's (second = true). */
+    fun consumption(s: TripSummary, factor: Double): Pair<Double, Boolean>? {
+        s.consumptionLPer100Km?.let { return it to false }
+        val litres = s.counterFuelL?.takeIf { it > 0 } ?: return null
+        if (s.distanceKm < MIN_KM) return null
+        return litres * factor / s.distanceKm * 100.0 to true
+    }
+
+    /** Litres burnt: the tank level's, or the counter's scaled by [factor]. */
+    fun used(s: TripSummary, factor: Double): Double? = s.fuelUsedL?.takeIf { s.consumptionLPer100Km != null }
+        ?: s.counterFuelL?.let { it * factor } ?: s.fuelUsedL
 }

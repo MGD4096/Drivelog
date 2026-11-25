@@ -55,6 +55,9 @@ object CarValuesBundle {
     private const val OPEN = "openParts"
     private const val BATTERY = "batteryPercent"
     private const val TYRES = "tyrePressureWarning"
+    private const val SPEED = "speedKmh"
+    private const val AVG_SPEED = "avgSpeedKmh"
+    private const val FUEL_TOTAL = "fuelUsedTotalL"
 
     fun toBundle(v: CarValues): Bundle = Bundle().apply {
         v.odometerKm?.let { putDouble(ODOMETER, it) }
@@ -66,6 +69,9 @@ object CarValuesBundle {
         v.openParts?.let { putStringArrayList(OPEN, ArrayList(it)) }
         v.batteryPercent?.let { putDouble(BATTERY, it) }
         v.tyrePressureWarning?.let { putBoolean(TYRES, it) }
+        v.speedKmh?.let { putDouble(SPEED, it) }
+        v.avgSpeedKmh?.let { putDouble(AVG_SPEED, it) }
+        v.fuelUsedTotalL?.let { putDouble(FUEL_TOTAL, it) }
     }
 
     /** Never throws: a value of the wrong type counts as unknown. The receiver still runs [CarValues.checked]. */
@@ -86,7 +92,7 @@ object CarValuesBundle {
         val open = try { b.getStringArrayList(OPEN) } catch (e: RuntimeException) { null }
         return CarValues(
             num(ODOMETER), num(FUEL), num(RANGE), num(AVG), num(OUTSIDE), num(INSIDE), open?.filterNotNull(),
-            num(BATTERY), flag(TYRES),
+            num(BATTERY), flag(TYRES), num(SPEED), num(AVG_SPEED), num(FUEL_TOTAL),
         )
     }
 }

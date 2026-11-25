@@ -226,6 +226,7 @@ class TripService : Service() {
         val now = System.currentTimeMillis()
         val endMs = if (disconnectedAtMs != 0L) disconnectedAtMs else now
         recorder.onCar(now, AppState.car.snapshot())
+        recorder.onTotals(AppState.car.totals())
         val trip = recorder.finish(endMs)
         saveReading()
         running = false
@@ -234,6 +235,7 @@ class TripService : Service() {
         stopPlugin()
 
         var message = "$reason."
+        var savedId: String? = null
         if (trip != null) {
             val summary = TripStats.summarize(trip)
             rememberParking(summary.endLat, summary.endLon, endMs)
@@ -242,17 +244,20 @@ class TripService : Service() {
                 clearDraft()
             } else {
                 try {
-                    store.save(trip)
+                    // the driver from the settings, so the mileage log only needs the kind of trip
+                    store.save(AppSettings.driver(this)?.let { trip.copy(log = trip.log.copy(driver = it)) } ?: trip)
                     clearDraft()
                     message = tr("{0}. Saved {1} km.", reason, km(summary.distanceKm))
+                    savedId = trip.id
                     checkBattery()
                 } catch (e: IOException) {
                     message = tr("{0}, but the trip could not be saved: {1}", reason, e.message)     // the draft stays for a retry
                 }
             }
-            Notifications.tripResult(this, message)
+            Notifications.tripResult(this, message, savedId)
         }
         AppState.status = ServiceStatus(message = message)
+        CarWidget.update(this)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -263,6 +268,7 @@ class TripService : Service() {
         val now = System.currentTimeMillis()
         val car = AppState.car.snapshot()
         recorder.onCar(now, car)
+        recorder.onTotals(AppState.car.totals())
         saveReading()
         if (car.tyrePressureWarning == true && !tyreWarned) {          // once per trip
             tyreWarned = true
@@ -286,6 +292,10 @@ class TripService : Service() {
         Notifications.updateTrip(this, carName, text)
     }
 
+    /** The car's own speed when the plugin sent it in the last few seconds; GPS is the fallback. */
+    private fun carSpeedKmh(now: Long): Double? =
+        AppState.car.snapshot().speedKmh?.takeIf { now - AppState.car.lastUpdateMillis < 10_000 }
+
     private fun publish(phase: Phase) {
         val now = System.currentTimeMillis()
         AppState.status = ServiceStatus(
@@ -297,7 +307,7 @@ class TripService : Service() {
             pluginMissing = pluginMissing,
             gpsProblem = gpsProblem,
             lastFixMs = lastFixMs,
-            speedKmh = lastSpeedKmh?.takeIf { now - lastFixMs < 10_000 },
+            speedKmh = carSpeedKmh(now) ?: lastSpeedKmh?.takeIf { now - lastFixMs < 10_000 },
             trip = if (recorder.isRecording) recorder.liveSummary(now) else null,
             reconnectDeadlineMs = if (disconnectedAtMs != 0L) disconnectedAtMs + GRACE_MS else 0L,
         )
@@ -334,6 +344,7 @@ class TripService : Service() {
         try {
             FileLastReadingStore(File(filesDir, FileLastReadingStore.FILE_NAME)).put(carAddress, AppState.car.snapshot(), at)
             savedReadingMs = at
+            CarWidget.update(this)
         } catch (e: IOException) {
             // tried again on the next tick
         }

@@ -31,6 +31,7 @@ class ExportProvider : ContentProvider() {
     override fun getType(uri: Uri): String = when {
         uri.lastPathSegment?.endsWith(".gpx") == true -> "application/gpx+xml"
         uri.lastPathSegment?.endsWith(".csv") == true -> "text/csv"
+        uri.lastPathSegment?.endsWith(".pdf") == true -> "application/pdf"
         else -> "application/octet-stream"
     }
 

@@ -860,7 +860,7 @@ template <int P> bool onCds(void*, const bmw::BasicString<unsigned short>& v) {
 typedef bool (*CdsStub)(void*, const bmw::BasicString<unsigned short>&);
 const CdsStub kStubs[] = { &onCds<0>, &onCds<1>, &onCds<2>, &onCds<3>, &onCds<4>, &onCds<5>, &onCds<6>,
                            &onCds<7>, &onCds<8>, &onCds<9>, &onCds<10>, &onCds<11>, &onCds<12>, &onCds<13>,
-                           &onCds<14> };
+                           &onCds<14>, &onCds<15>, &onCds<16>, &onCds<17> };
 typedef char kOneStubPerProperty[sizeof(kStubs) / sizeof(kStubs[0]) == (size_t)kPropertyCount ? 1 : -1];
 
 // ---- bmw::Runnable stand-in: vtable copied from the framework's, run() is ours -----------------------------------

@@ -11,10 +11,10 @@ an iDrive plugin that runs inside the head unit. The maintainer writes in Polish
 |---|---|---|
 | `car-api/` | `CarValues` (the neutral car values, `checked()` ranges, `PART_LABELS`) and `Json` (tiny reader/writer) | Kotlin/JVM |
 | `plugin-api/` | the Drivelog ↔ plugin contract: AIDL `ICarPlugin` / `ICarDataSink`, `CarPluginContract` (actions, meta-data keys, states, `API_VERSION`), `CarValuesBundle`, the `signature` permission in its manifest | Android library |
-| `core/` | Drivelog's logic: trips, recorder, statistics, storage, backup, GPX/CSV, reminders, map maths, weather, texts (`Lang.kt`, `Polish.kt`) | Kotlin/JVM |
-| `app/` | Drivelog (`dev.drivelog`): `TripService`, Bluetooth, screens, `CarPluginLink.kt` (finds plugins, checks signature, binds) | Android app |
+| `core/` | Drivelog's logic: trips, recorder, statistics, storage, backup, GPX/CSV, reminders, map maths, weather, mileage log (`MileageLog.kt`), fuel log (`FuelLog.kt`), monthly statistics, latest car values (`LastReading.kt`), texts (`Lang.kt`, `Polish.kt`) | Kotlin/JVM |
+| `app/` | Drivelog (`dev.drivelog`): `TripService`, Bluetooth, screens, `CarPluginLink.kt` (finds plugins, checks signature, binds), `StatsActivity`, `FuelPanel`, `MileageExport` (PDF/CSV), `CarWidget` (home screen) | Android app |
 | `plugins/id6/` | Drivelog ID6 (`dev.drivelog.id6`): `Cds.kt` (BMW CDS formats → `CarValues`), `Bridge.kt` (TCP client of the head-unit plugin), `CarWifi.kt`, `Id6PluginService.kt`, `InfoActivity` (no launcher icon) | Android app |
-| `headunit/` | DrivelogBridge: iDrive PluginApp in C++98 for NBT Evo (QNX 6.5) and EntryNav2 (Linux ARMv7hf); serves 15 CDS values on TCP 7777 as JSON lines | C++ |
+| `headunit/` | DrivelogBridge: iDrive PluginApp in C++98 for NBT Evo (QNX 6.5) and EntryNav2 (Linux ARMv7hf); serves 18 CDS values on TCP 7777 as JSON lines | C++ |
 
 Data path: car CDS → `headunit/` (TCP, JSON lines; the head unit calls the phone on 7778, or the phone calls 7777) → `plugins/id6` (BMW formats → `CarValues`, sent as a
 `Bundle` over AIDL at most once a second, on change) → Drivelog `CarState` → trip recorder / screens.
@@ -88,6 +88,10 @@ Environment: Windows, PowerShell, Git Bash, Docker Desktop. No Python, g++ or Ja
   calls the phone on port 7778 (`HeadUnitCalls`, `callPhones()` in `drivelog_bridge.cpp`); the phone→car way on 7777
   stays for an ordinary Wi-Fi connection. Keep both.
 
+- **`engine.consumption`** is a raw counter with an unknown unit: `FuelCounter` in `plugins/id6/Cds.kt` assumes about
+  1 µl a step (one cold-idle measurement) and Drivelog scales it by the tank level over earlier trips
+  (`CounterFuel.factor`). Not checked against a full tank yet. The car's speed (`driving.speedActual`) wins over GPS for
+  top speed and moving time when the plugin sends it.
 - Under qemu on a Windows bind mount, 32-bit `stat()` fails with `EOVERFLOW`: the head-unit host test keeps its data
   folder in the container's `/tmp`. `docker cp` cannot copy symlinks to Windows: the ARM sysroot travels as a tar.
 - In Kotlin, `Socket().apply { connect(InetSocketAddress(host, port)) }` reads `Socket.port` (0), not an outer `port`.

@@ -1,3 +1,8 @@
 <resources>
     <color name="ic_background">#0F2A3D</color>
+    <!-- The home-screen widget (its own colours: the app's Colors object does not reach the launcher). -->
+    <color name="widget_bg">#F2FFFFFF</color>
+    <color name="widget_title">#0D47A1</color>
+    <color name="widget_text">#212121</color>
+    <color name="widget_muted">#757575</color>
 </resources>

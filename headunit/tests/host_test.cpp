@@ -270,7 +270,7 @@ static void testPlugin(const char* libPath, const std::string& dataDir) {
     Reader r(fd);
     std::string hello = r.data(3000);
     CHECK(contains(hello, "{\"type\":\"hello\",\"proto\":1,\"app\":\"drivelog-bridge-0.1.0 EntryNav2\""));
-    CHECK(contains(hello, "\"props\":15}"));
+    CHECK(contains(hello, "\"props\":18}"));
     std::string snap = r.data(3000);
     CHECK(contains(snap, "{\"type\":\"snapshot\",") && contains(snap, "\"values\":{\"driving.odometer\":{\"odometer\":12345}}}"));
 
@@ -329,7 +329,7 @@ static void testPlugin(const char* libPath, const std::string& dataDir) {
 
     std::string log = readFile(dataDir + "/bridge.log");
     CHECK(contains(log, "listening on 127.0.0.1:17777"));
-    CHECK(contains(log, "subscribed 15 CDS properties"));
+    CHECK(contains(log, "subscribed 18 CDS properties"));
     CHECK(contains(log, "calling 1 address(es) (127.0.0.1) from bridge.conf phoneAddress on port 17778"));
     CHECK(contains(log, "calling 127.0.0.1:17778: Connection refused"));
     CHECK(contains(log, "phone 127.0.0.1 connected (the plugin called it)"));
