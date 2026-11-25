@@ -72,6 +72,17 @@
         <activity android:name=".MapActivity" android:exported="false" />
         <activity android:name=".StatsActivity" android:exported="false" />
 
+        <!-- Which car a home-screen widget shows: the launcher opens it when the widget is placed. -->
+        <activity
+            android:name=".WidgetCarActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@style/WidgetPicker">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <!-- The Business / Private buttons of the "Trip finished" notification. -->
         <receiver android:name=".TripKindReceiver" android:exported="false" />
 

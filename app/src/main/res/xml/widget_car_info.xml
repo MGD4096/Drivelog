@@ -9,6 +9,8 @@
     android:minResizeHeight="120dp"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="1800000"
+    android:configure="dev.drivelog.WidgetCarActivity"
+    android:widgetFeatures="reconfigurable"
     android:initialLayout="@layout/widget_car"
     android:previewLayout="@layout/widget_car"
     android:widgetCategory="home_screen" />

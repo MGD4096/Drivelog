@@ -3,4 +3,11 @@
     <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar" />
     <style name="AppTheme.Light" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar" />
     <style name="AppTheme.Dark" parent="@android:style/Theme.DeviceDefault.NoActionBar" />
+    <!-- The widget's car picker: no window of its own, only the list (WidgetCarActivity). -->
+    <style name="WidgetPicker" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
 </resources>
