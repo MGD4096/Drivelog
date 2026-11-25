@@ -11,15 +11,14 @@ import android.view.WindowInsets
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import dev.drivelog.core.FileTripStore
+import dev.drivelog.core.TripStore
 import dev.drivelog.core.TripMeta
-import java.io.File
-import java.io.IOException
 import java.util.concurrent.Executors
 import dev.drivelog.core.tr
 
 /** The trips of one car, newest first. */
 class CarTripsActivity : Activity() {
+    private val stores by lazy { Stores(this) }
 
     private val io = Executors.newSingleThreadExecutor()
     private lateinit var ui: Ui
@@ -28,7 +27,7 @@ class CarTripsActivity : Activity() {
     private lateinit var summary: TextView
     private lateinit var box: LinearLayout
     private lateinit var heading: TextView
-    private var store: FileTripStore? = null
+    private var store: TripStore? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Colors.prepare(this)
@@ -36,10 +35,10 @@ class CarTripsActivity : Activity() {
         ui = Ui(this)
         address = intent.getStringExtra(CarActivity.EXTRA_ADDRESS) ?: run { finish(); return }
         val car = Prefs.cars(this).firstOrNull { it.address.equals(address, true) }
-        store = try { FileTripStore(File(filesDir, "trips")) } catch (e: IOException) { null }
+        store = stores.trips
         actions = TripActions(this, ui, store, io) { load() }
 
-        heading = ui.title(car?.let { c -> try { dev.drivelog.core.FileCarDetailsStore(File(filesDir, "cars.json")).get(c.address).model?.takeIf { it.isNotBlank() } } catch (e: Exception) { null } ?: c.name } ?: tr("Trips"))
+        heading = ui.title(car?.let { c -> stores.carName(c.address, c.name) } ?: tr("Trips"))
         summary = ui.body().apply { setTextColor(Colors.muted); setPadding(0, ui.dp(4), 0, ui.dp(8)) }
         box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val content = LinearLayout(this).apply {
@@ -80,11 +79,7 @@ class CarTripsActivity : Activity() {
     private fun load() {
         val s = store ?: return
         io.execute {
-            val mine = try {
-                s.list().filter { it.carId.equals(address, ignoreCase = true) }          // already newest first
-            } catch (e: Exception) {
-                emptyList()
-            }
+            val mine = s.list().filter { it.carId.equals(address, ignoreCase = true) }          // already newest first
             runOnUiThread { if (!isDestroyed) show(mine) }
         }
     }

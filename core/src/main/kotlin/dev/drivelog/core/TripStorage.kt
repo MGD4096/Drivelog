@@ -4,9 +4,6 @@ import dev.drivelog.carapi.Json
 
 import java.io.File
 import java.io.IOException
-import java.nio.file.AtomicMoveNotSupportedException
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 /** What the trip list needs, small enough to read for every trip without loading the whole track. */
 data class TripMeta(
@@ -48,7 +45,8 @@ object TripJson {
 
     /** Returns null when the text is not a readable trip. */
     fun fromJson(text: String): Trip? {
-        val o = Json.parseObject(text) ?: return null
+        // a damaged file (cut short, edited by hand) is skipped like a missing one
+        val o = try { Json.parseObject(text) } catch (e: Json.JsonException) { null } ?: return null
         return try {
             Trip(
                 id = o["id"] as String,
@@ -153,7 +151,8 @@ object TripJson {
     }
 
     fun metaFromJson(text: String): TripMeta? {
-        val o = Json.parseObject(text) ?: return null
+        // a damaged file (cut short, edited by hand) is skipped like a missing one
+        val o = try { Json.parseObject(text) } catch (e: Json.JsonException) { null } ?: return null
         return try {
             val s = o["summary"] as Map<*, *>
             fun d(k: String) = s[k] as? Double
@@ -201,13 +200,13 @@ object TripJson {
  * Trips as plain files in one directory: `<id>.trip.json` (the full track) and `<id>.meta.json` (the summary shown in
  * the list). `draft.trip.json` is the trip in progress, rewritten now and then so a killed app loses almost nothing.
  */
-class FileTripStore(private val dir: File) {
+class FileTripStore(private val dir: File) : TripStore {
 
     init {
         if (!dir.isDirectory && !dir.mkdirs()) throw IOException("Cannot create $dir")
     }
 
-    fun save(trip: Trip): TripMeta {
+    override fun save(trip: Trip): TripMeta {
         val meta = TripMeta(trip.id, trip.carId, trip.carName, trip.startMs, trip.endMs, TripStats.summarize(trip), trip.log.cleaned())
         writeAtomically(File(dir, "${trip.id}$TRIP_SUFFIX"), TripJson.toJson(trip))
         writeAtomically(File(dir, "${trip.id}$META_SUFFIX"), TripJson.metaToJson(meta))   // last: its presence means "complete"
@@ -215,12 +214,12 @@ class FileTripStore(private val dir: File) {
     }
 
     /** Newest first. Unreadable entries are skipped. */
-    fun list(): List<TripMeta> =
+    override fun list(): List<TripMeta> =
         (dir.listFiles { f -> f.name.endsWith(META_SUFFIX) } ?: emptyArray())
             .mapNotNull { f -> try { TripJson.metaFromJson(f.readText()) } catch (e: IOException) { null } }
             .sortedByDescending { it.startMs }
 
-    fun load(id: String): Trip? {
+    override fun load(id: String): Trip? {
         if (!validId(id)) return null
         val f = File(dir, "$id$TRIP_SUFFIX")
         return try { if (f.isFile) TripJson.fromJson(f.readText()) else null } catch (e: IOException) { null }
@@ -228,12 +227,12 @@ class FileTripStore(private val dir: File) {
 
     /** Changes the mileage-log details of a saved trip. Returns the new summary, or null when there is no such trip. */
     @Throws(IOException::class)
-    fun updateLog(id: String, log: TripLog): TripMeta? {
+    override fun updateLog(id: String, log: TripLog): TripMeta? {
         val trip = load(id) ?: return null
         return save(trip.copy(log = log.cleaned()))
     }
 
-    fun delete(id: String) {
+    override fun delete(id: String) {
         if (!validId(id)) return
         File(dir, "$id$META_SUFFIX").delete()
         File(dir, "$id$TRIP_SUFFIX").delete()
@@ -244,7 +243,7 @@ class FileTripStore(private val dir: File) {
      * was changed. Returns how many trips were moved.
      */
     @Throws(IOException::class)
-    fun reassignCar(oldId: String, newId: String, newName: String): Int {
+    override fun reassignCar(oldId: String, newId: String, newName: String): Int {
         var moved = 0
         for (meta in list()) {
             if (!meta.carId.equals(oldId, ignoreCase = true)) continue
@@ -256,26 +255,18 @@ class FileTripStore(private val dir: File) {
         return moved
     }
 
-    fun saveDraft(trip: Trip) = writeAtomically(File(dir, DRAFT), TripJson.toJson(trip))
+    override fun saveDraft(trip: Trip) = writeAtomically(File(dir, DRAFT), TripJson.toJson(trip))
 
-    fun loadDraft(): Trip? {
+    override fun loadDraft(): Trip? {
         val f = File(dir, DRAFT)
         return try { if (f.isFile) TripJson.fromJson(f.readText()) else null } catch (e: IOException) { null }
     }
 
-    fun clearDraft() { File(dir, DRAFT).delete() }
+    override fun clearDraft() { File(dir, DRAFT).delete() }
 
     private fun validId(id: String) = ID_PATTERN.matches(id)
 
-    private fun writeAtomically(target: File, text: String) {
-        val tmp = File(dir, target.name + ".tmp")
-        tmp.writeText(text)
-        try {
-            Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-        } catch (e: AtomicMoveNotSupportedException) {
-            Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
-        }
-    }
+    private fun writeAtomically(target: File, text: String) = AtomicFile.writeText(target, text)
 
     companion object {
         private const val TRIP_SUFFIX = ".trip.json"

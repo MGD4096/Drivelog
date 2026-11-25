@@ -166,7 +166,7 @@ class CarDetailsStoreTest {
         store.put("BB:02", CarDetails(model = "Mini"))
         assertEquals("Mini", store.get("BB:02").model)
         assertEquals(2998, store.get("AA:01").engineCc)
-        store.remove("AA:01")
+        store.removeCar("AA:01")
         assertTrue(store.get("AA:01").isEmpty)
         assertEquals("Mini", store.get("BB:02").model)
         store.put("BB:02", CarDetails())            // emptying a car's details removes its entry

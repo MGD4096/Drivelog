@@ -19,13 +19,15 @@ class CarBluetoothReceiver : BroadcastReceiver() {
         val address = bluetoothDeviceFrom(intent)?.address ?: return
         val car = Prefs.cars(context).firstOrNull { it.address.equals(address, ignoreCase = true) } ?: return
         // An archived car is out of use: no trip is started for it
-        if (try { dev.drivelog.core.FileCarDetailsStore(java.io.File(context.filesDir, "cars.json")).get(car.address).archived } catch (e: Exception) { false }) return
+        if (Stores(context).details.get(car.address).archived) return
         // Already running (for example a reconnect during the grace period): the service sees that itself.
         if (AppState.status.phase != Phase.IDLE) return
         try {
             TripService.start(context, car.address, car.name)
-        } catch (e: Exception) {
-            // ForegroundServiceStartNotAllowedException on Android 12+, or the app is not allowed to run
+        } catch (e: IllegalStateException) {
+            // ForegroundServiceStartNotAllowedException (an IllegalStateException) on Android 12+, or the app may not run now
+            Notifications.tapToStart(context, car)
+        } catch (e: SecurityException) {
             Notifications.tapToStart(context, car)
         }
     }

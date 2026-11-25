@@ -3,9 +3,6 @@ package dev.drivelog.core
 import dev.drivelog.carapi.Json
 import java.io.File
 import java.io.IOException
-import java.nio.file.AtomicMoveNotSupportedException
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
@@ -115,15 +112,15 @@ object FuelLog {
 }
 
 /** All cars' refuellings in one small JSON file, keyed by Bluetooth address (case does not matter). */
-class FileFuelStore(private val file: File) {
+class FileFuelStore(private val file: File) : FuelStore {
 
     /** Newest first. */
     @Synchronized
-    fun list(carId: String): List<FuelEntry> = readAll()[carId.lowercase(Locale.ROOT)].orEmpty().sortedByDescending { it.atMs }
+    override fun list(carId: String): List<FuelEntry> = readAll()[carId.lowercase(Locale.ROOT)].orEmpty().sortedByDescending { it.atMs }
 
     @Synchronized
     @Throws(IOException::class)
-    fun save(carId: String, entry: FuelEntry) {
+    override fun save(carId: String, entry: FuelEntry) {
         val all = readAll()
         val key = carId.lowercase(Locale.ROOT)
         all[key] = all[key].orEmpty().filter { it.id != entry.id } + entry
@@ -132,7 +129,7 @@ class FileFuelStore(private val file: File) {
 
     @Synchronized
     @Throws(IOException::class)
-    fun delete(carId: String, id: String) {
+    override fun delete(carId: String, id: String) {
         val all = readAll()
         val key = carId.lowercase(Locale.ROOT)
         all[key] = all[key].orEmpty().filter { it.id != id }
@@ -141,14 +138,15 @@ class FileFuelStore(private val file: File) {
 
     @Synchronized
     @Throws(IOException::class)
-    fun removeCar(carId: String) {
+    override fun removeCar(address: String) {
+        val carId = address
         val all = readAll()
         if (all.remove(carId.lowercase(Locale.ROOT)) != null) write(all)
     }
 
     @Synchronized
     @Throws(IOException::class)
-    fun moveCar(from: String, to: String) {
+    override fun moveCar(from: String, to: String) {
         val all = readAll()
         val moved = all.remove(from.lowercase(Locale.ROOT)) ?: return
         val key = to.lowercase(Locale.ROOT)
@@ -189,14 +187,7 @@ class FileFuelStore(private val file: File) {
 
     private fun write(all: Map<String, List<FuelEntry>>) {
         val json = Json.stringify(all.filterValues { it.isNotEmpty() }.mapValues { (_, list) -> list.map { toMap(it) } })
-        file.parentFile?.mkdirs()
-        val tmp = File(file.parentFile, file.name + ".tmp")
-        tmp.writeText(json)
-        try {
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-        } catch (e: AtomicMoveNotSupportedException) {
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
-        }
+        AtomicFile.writeText(file, json)
     }
 
     companion object {

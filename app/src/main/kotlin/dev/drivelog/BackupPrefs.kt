@@ -25,7 +25,7 @@ object BackupPrefs {
 
     /** Puts the settings of a backup back; a backup without them leaves the current settings as they are. */
     fun restore(c: Context, extras: Map<String, String>) {
-        val m = extras[NAME]?.let { try { Json.parseObject(it) } catch (e: Exception) { null } } ?: return
+        val m = extras[NAME]?.let { try { Json.parseObject(it) } catch (e: Json.JsonException) { null } } ?: return
         val cars = (m["cars"] as? List<*>)?.mapNotNull { item ->
             val car = item as? Map<*, *> ?: return@mapNotNull null
             val address = car["address"] as? String ?: return@mapNotNull null

@@ -10,8 +10,6 @@ import android.net.Uri
 import android.text.TextUtils
 import android.text.TextPaint
 import android.widget.Toast
-import dev.drivelog.core.FileCarDetailsStore
-import dev.drivelog.core.FileTripStore
 import dev.drivelog.core.MileageLog
 import dev.drivelog.core.tr
 import java.io.File
@@ -25,6 +23,7 @@ import java.util.concurrent.ExecutorService
  * trips (all, business, private) and the format, then the share sheet opens.
  */
 class MileageExport(private val activity: Activity, private val ui: Ui, private val io: ExecutorService) {
+    private val stores = Stores(activity)
 
     private class Period(val label: String, val from: LocalDate, val to: LocalDate)
 
@@ -66,8 +65,8 @@ class MileageExport(private val activity: Activity, private val ui: Ui, private 
             var uri: Uri? = null
             var empty = false
             try {
-                val trips = FileTripStore(File(activity.filesDir, "trips")).list()
-                val d = FileCarDetailsStore(File(activity.filesDir, "cars.json")).get(car.address)
+                val trips = stores.requireTrips().list()
+                val d = stores.details.get(car.address)
                 val log = MileageLog.build(car.address, trips, period.from, period.to, filter)
                 empty = log.entries.isEmpty()
                 if (!empty) {

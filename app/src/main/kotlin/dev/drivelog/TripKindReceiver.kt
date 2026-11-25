@@ -4,10 +4,9 @@ import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import dev.drivelog.core.FileTripStore
 import dev.drivelog.core.TripKind
 import dev.drivelog.core.tr
-import java.io.File
+import java.io.IOException
 
 /**
  * The "Business" / "Private" buttons of the "Trip finished" notification: marks that trip (and fills in the driver
@@ -23,12 +22,12 @@ class TripKindReceiver : BroadcastReceiver() {
         val pending = goAsync()
         Thread {
             try {
-                val store = FileTripStore(File(app.filesDir, "trips"))
+                val store = Stores(app).requireTrips()
                 val trip = store.load(id)
                 val done = trip != null && store.updateLog(id, trip.log.copy(kind = kind, driver = trip.log.driver ?: AppSettings.driver(app))) != null
                 app.getSystemService(NotificationManager::class.java).cancel(Notifications.ID_RESULT)
                 if (done) Notifications.tripResult(app, tr("Marked as {0}. Purpose and route can be added in the trip.", kind.label.lowercase()))
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 // the trip can still be marked in the app
             } finally {
                 pending.finish()

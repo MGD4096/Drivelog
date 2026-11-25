@@ -18,8 +18,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import dev.drivelog.core.CarDetails
-import dev.drivelog.core.FileCarDetailsStore
-import java.io.File
+import dev.drivelog.core.CarDetailsStore
 import java.io.IOException
 import java.util.concurrent.Executors
 import kotlin.math.abs
@@ -30,7 +29,7 @@ class PhotoGalleryActivity : Activity() {
 
     private val io = Executors.newSingleThreadExecutor()
     private lateinit var ui: Ui
-    private lateinit var details: FileCarDetailsStore
+    private lateinit var details: CarDetailsStore
     private lateinit var address: String
     private lateinit var image: ImageView
     private lateinit var counter: TextView
@@ -43,7 +42,7 @@ class PhotoGalleryActivity : Activity() {
         super.onCreate(savedInstanceState)
         ui = Ui(this)
         address = intent.getStringExtra(CarActivity.EXTRA_ADDRESS) ?: run { finish(); return }
-        details = FileCarDetailsStore(File(filesDir, "cars.json"))
+        details = Stores(this).details
         index = savedInstanceState?.getInt(KEY_INDEX) ?: intent.getIntExtra(EXTRA_INDEX, 0)
 
         image = ImageView(this).apply {

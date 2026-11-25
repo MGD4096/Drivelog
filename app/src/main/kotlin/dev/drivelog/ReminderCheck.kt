@@ -10,12 +10,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import dev.drivelog.core.CarForReminders
-import dev.drivelog.core.FileCarDetailsStore
-import dev.drivelog.core.FileCarEventsStore
-import dev.drivelog.core.FileTripStore
 import dev.drivelog.core.ReminderPlanner
 import dev.drivelog.core.VehicleSummary
-import java.io.File
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 
@@ -32,10 +28,12 @@ object ReminderCheck {
         val settings = AppSettings.reminders(app)
         if (!settings.enabled || !canNotify(app)) return      // nothing is marked as announced, so it is not lost
 
-        val trips = try { FileTripStore(File(app.filesDir, "trips")).list() } catch (e: Exception) { emptyList() }
-        val events = FileCarEventsStore(File(app.filesDir, "car_events.json"))
-        val details = FileCarDetailsStore(File(app.filesDir, "cars.json"))
-        val readings = dev.drivelog.core.FileLastReadingStore(File(app.filesDir, dev.drivelog.core.FileLastReadingStore.FILE_NAME))
+        val stores = Stores(app)
+
+        val trips = stores.trips?.list() ?: emptyList()
+        val events = stores.events
+        val details = stores.details
+        val readings = stores.readings
         val cars = Prefs.cars(app).filter { !details.get(it.address).archived }.map { car ->
             val summary = VehicleSummary.of(car.address, trips, reading = readings.get(car.address))
             CarForReminders(car.address, car.name, events.list(car.address), CarTexts.currentOdometerKm(car, summary, details.get(car.address)))

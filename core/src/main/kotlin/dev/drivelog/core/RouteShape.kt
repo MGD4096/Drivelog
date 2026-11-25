@@ -4,9 +4,6 @@ import dev.drivelog.carapi.Json
 
 import java.io.File
 import java.io.IOException
-import java.nio.file.AtomicMoveNotSupportedException
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.hypot
@@ -136,14 +133,7 @@ class RouteCache(private val file: File) {
     private fun write(all: Map<String, List<LatLon>>) {
         val json = Json.stringify(all.mapValues { (_, shape) -> shape.flatMap { listOf(Math.round(it.lat * 1e5) / 1e5, Math.round(it.lon * 1e5) / 1e5) } })
         try {
-            file.parentFile?.mkdirs()
-            val tmp = File(file.parentFile, file.name + ".tmp")
-            tmp.writeText(json)
-            try {
-                Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-            } catch (e: AtomicMoveNotSupportedException) {
-                Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
-            }
+            AtomicFile.writeText(file, json)
         } catch (e: IOException) {
             // only a convenience
         }

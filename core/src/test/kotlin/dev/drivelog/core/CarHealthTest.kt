@@ -41,6 +41,18 @@ class CarHealthTest {
     }
 
     @Test
+    fun batteryHistoryNeedsOnlyALoaderNotTheFiles() {
+        val store = FileTripStore(dir)
+        val trips = listOf(trip("a", "AA", 1_000, 90.0, 89.0), trip("b", "AA", 2_000, 60.0, 61.0))
+        trips.forEach { store.save(it) }
+        val inMemory = trips.associateBy { it.id }
+        val loaded = ArrayList<String>()
+        val loader = TripLoader { id -> loaded += id; inMemory[id] }
+        assertEquals(listOf(90.0, 60.0), CarHealth.batteryHistory("AA", store.list(), loader).map { it.percent })
+        assertEquals(listOf("b", "a"), loaded)                           // newest first, only what it needs
+    }
+
+    @Test
     fun theFirstBatteryReadingOfATripIsItsStartReading() {
         val r = TripRecorder()
         r.begin("AA", "c", 0, CarSnapshot.EMPTY)                    // as TripService does: before any plugin value

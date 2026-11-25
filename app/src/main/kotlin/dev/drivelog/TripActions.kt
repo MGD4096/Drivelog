@@ -17,8 +17,7 @@ import dev.drivelog.core.Csv
 import dev.drivelog.core.CounterFuel
 import dev.drivelog.core.TripKind
 import dev.drivelog.core.TripLog
-import dev.drivelog.core.FileCarDetailsStore
-import dev.drivelog.core.FileTripStore
+import dev.drivelog.core.TripStore
 import dev.drivelog.core.Gpx
 import dev.drivelog.core.Trip
 import dev.drivelog.core.TripMeta
@@ -39,16 +38,17 @@ import dev.drivelog.core.tr
 class TripActions(
     private val activity: Activity,
     private val ui: Ui,
-    private val store: FileTripStore?,
+    private val store: TripStore?,
     private val io: ExecutorService,
     private val onChanged: () -> Unit,
 ) {
+    private val stores = Stores(activity)
 
-    private val carDetails = FileCarDetailsStore(File(activity.filesDir, "cars.json"))
+    private val carDetails = stores.details
 
     /** The model of the car when it is filled in, otherwise the name of its Bluetooth device. */
     private fun carLabel(m: TripMeta): String =
-        try { carDetails.get(m.carId).model?.takeIf { it.isNotBlank() } } catch (e: Exception) { null } ?: m.carName
+        stores.carName(m.carId, m.carName)
 
     private val strong = Colors.strong
     private val soft = Colors.soft

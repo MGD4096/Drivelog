@@ -5,9 +5,7 @@ import android.app.AlertDialog
 import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.os.Bundle
-import dev.drivelog.core.FileCarDetailsStore
 import dev.drivelog.core.tr
-import java.io.File
 
 /**
  * Asks which car a home-screen widget shows, when the widget is placed (and again from the launcher's "Widget
@@ -27,9 +25,9 @@ class WidgetCarActivity : Activity() {
         }
         Colors.init(this)
         AppSettings.applyLanguage(this)
-        val details = FileCarDetailsStore(File(filesDir, "cars.json"))
+        val stores = Stores(this)
         val cars = CarWidget.cars(this)
-        val names = listOf(tr("The car that reported last")) + cars.map { details.get(it.address).model?.takeIf { m -> m.isNotBlank() } ?: it.name }
+        val names = listOf(tr("The car that reported last")) + cars.map { stores.carName(it.address, it.name) }
         val current = CarWidget.carOf(this, id)
         val checked = cars.indexOfFirst { it.address.equals(current, ignoreCase = true) } + 1
         val theme = if (Colors.dark) android.R.style.Theme_DeviceDefault_Dialog_Alert else android.R.style.Theme_DeviceDefault_Light_Dialog_Alert

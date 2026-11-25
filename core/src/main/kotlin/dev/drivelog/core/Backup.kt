@@ -54,7 +54,7 @@ object Backup {
             if (entry.name in NOT_EXPORTED || entry.name == STAGE) continue
             val list = if (entry.isDirectory) entry.walkTopDown().filter { it.isFile }.toList() else listOf(entry)
             for (file in list) {
-                if (file.name.endsWith(".tmp")) continue
+                if (file.name.endsWith(AtomicFile.TMP_SUFFIX)) continue
                 val relative = file.relativeTo(dir).path.replace(File.separatorChar, '/')
                 zip.putNextEntry(ZipEntry(DATA + relative))
                 file.inputStream().use { it.copyTo(zip) }
@@ -77,7 +77,7 @@ object Backup {
             var manifest: Map<String, Any?>? = null
             val extras = LinkedHashMap<String, String>()
             var files = 0
-            val zip = try { ZipInputStream(input) } catch (e: Exception) { throw notABackup() }
+            val zip = ZipInputStream(input)
             while (true) {
                 val entry = try { zip.nextEntry } catch (e: IOException) { throw notABackup() } ?: break
                 val name = entry.name

@@ -20,13 +20,11 @@ import android.os.IBinder
 import android.os.Looper
 import dev.drivelog.core.CarHealth
 import dev.drivelog.core.CarPlugins
-import dev.drivelog.core.FileCarDetailsStore
-import dev.drivelog.core.FileLastReadingStore
+import dev.drivelog.core.LastReadingStore
 import dev.drivelog.pluginapi.CarPluginContract
-import dev.drivelog.core.FileTripStore
+import dev.drivelog.core.TripStore
 import dev.drivelog.core.TripRecorder
 import dev.drivelog.core.TripStats
-import java.io.File
 import java.io.IOException
 import java.util.Locale
 
@@ -38,17 +36,18 @@ import java.util.Locale
  * [AppState.car] (thread-safe). The recorder and the store are used from the main thread only.
  */
 class TripService : Service() {
+    private val stores by lazy { Stores(this) }
 
     private val handler = Handler(Looper.getMainLooper())
     private val recorder = TripRecorder()
-    private lateinit var store: FileTripStore
+    private lateinit var store: TripStore
 
     private var pluginLink: CarPluginLink? = null
     /** Set when the car uses a plugin that is not installed (or not signed like Drivelog). */
     private var pluginMissing: String? = null
     /** The tyre pressure warning was notified in this trip. */
     private var tyreWarned = false
-    /** The car values saved so far ([FileLastReadingStore]): the time of the delivery saved last. */
+    /** The car values saved so far ([LastReadingStore]): the time of the delivery saved last. */
     private var savedReadingMs = 0L
     private var locationManager: LocationManager? = null
     private var locationRegistered = false
@@ -115,7 +114,7 @@ class TripService : Service() {
         super.onCreate()
         locationManager = getSystemService(LocationManager::class.java)
         try {
-            store = FileTripStore(File(filesDir, "trips"))
+            store = stores.requireTrips()
         } catch (e: IOException) {
             Notifications.problem(this, tr("Cannot store trips"), e.message ?: tr("The trips folder cannot be created."))
             stopSelf()
@@ -180,8 +179,8 @@ class TripService : Service() {
         } catch (e: SecurityException) {
             Notifications.problem(this, tr("Location permission needed"), tr("Open the app and allow location access, then start the trip again."))
             false
-        } catch (e: Exception) {
-            // ForegroundServiceStartNotAllowedException: started from the background without an exemption
+        } catch (e: IllegalStateException) {
+            // ForegroundServiceStartNotAllowedException (an IllegalStateException): started from the background without an exemption
             Notifications.tapToStart(this, CarRef(address, name))
             false
         }
@@ -319,12 +318,8 @@ class TripService : Service() {
     private fun startPlugin() {
         if (pluginLink != null) return
         pluginMissing = null
-        val details = try {
-            FileCarDetailsStore(File(filesDir, "cars.json")).get(carAddress)
-        } catch (e: Exception) {
-            null
-        }
-        if (details != null && !details.usesPlugin) return
+        val details = stores.details.get(carAddress)
+        if (!details.usesPlugin) return
         val id = details?.plugin ?: CarPlugins.DEFAULT
         val installed = CarPluginRegistry.installed(this).firstOrNull { it.plugin.id == id }
         if (installed == null) {
@@ -342,7 +337,7 @@ class TripService : Service() {
         val at = AppState.car.lastUpdateMillis
         if (at == 0L || at == savedReadingMs) return
         try {
-            FileLastReadingStore(File(filesDir, FileLastReadingStore.FILE_NAME)).put(carAddress, AppState.car.snapshot(), at)
+            stores.readings.put(carAddress, AppState.car.snapshot(), at)
             savedReadingMs = at
             CarWidget.update(this)
         } catch (e: IOException) {
@@ -357,16 +352,16 @@ class TripService : Service() {
     private fun rememberParking(lat: Double?, lon: Double?, atMs: Long) {
         if (lat == null || lon == null) return
         try {
-            val cars = FileCarDetailsStore(File(filesDir, "cars.json"))
+            val cars = stores.details
             cars.put(carAddress, cars.get(carAddress).withParked(lat, lon, atMs))
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             // the latest saved trip still tells where it is
         }
     }
 
     /** After a trip is saved: a notification when the 12 V battery has just dropped below CarHealth.LOW_BATTERY_PERCENT. */
     private fun checkBattery() {
-        val history = try { CarHealth.batteryHistory(carAddress, store.list(), store) } catch (e: Exception) { return }
+        val history = CarHealth.batteryHistory(carAddress, store.list(), store)
         if (!CarHealth.batteryJustGotLow(history)) return
         Notifications.carWarning(
             this, Notifications.ID_BATTERY, tr("12 V battery low"),
@@ -437,12 +432,12 @@ class TripService : Service() {
     }
 
     private fun clearDraft() {
-        try { store.clearDraft() } catch (e: Exception) { /* nothing to do */ }
+        store.clearDraft()
     }
 
     /** A draft left by a killed service becomes a normal saved trip. */
     private fun recoverDraft() {
-        val draft = try { store.loadDraft() } catch (e: Exception) { null } ?: return
+        val draft = store.loadDraft() ?: return
         try {
             if (TripStats.isWorthKeeping(TripStats.summarize(draft))) store.save(draft)
             store.clearDraft()

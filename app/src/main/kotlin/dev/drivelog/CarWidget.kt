@@ -13,11 +13,9 @@ import android.view.View
 import dev.drivelog.core.Silhouette
 import android.widget.RemoteViews
 import dev.drivelog.core.CarHealth
-import dev.drivelog.core.FileCarDetailsStore
-import dev.drivelog.core.FileLastReadingStore
 import dev.drivelog.core.OpenPartsText
+import dev.drivelog.core.WidgetChoice
 import dev.drivelog.core.tr
-import java.io.File
 import java.util.Locale
 
 /**
@@ -45,7 +43,7 @@ class CarWidget : AppWidgetProvider() {
 
         /** The cars a widget can show: the followed ones with the plugin, not archived. */
         fun cars(context: Context): List<CarRef> {
-            val details = FileCarDetailsStore(File(context.filesDir, "cars.json"))
+            val details = Stores(context).details
             return Prefs.cars(context).filter { val d = details.get(it.address); !d.archived && d.usesPlugin }
         }
 
@@ -91,16 +89,16 @@ class CarWidget : AppWidgetProvider() {
             Colors.dark = (app.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
             AppSettings.applyLanguage(app)
             val ui = Ui(app)
-            val details = FileCarDetailsStore(File(app.filesDir, "cars.json"))
-            val readings = try { FileLastReadingStore(File(app.filesDir, FileLastReadingStore.FILE_NAME)).all() } catch (e: Exception) { emptyMap() }
+            val stores = Stores(app)
+            val details = stores.details
+            val readings = stores.readings.all()
             val cars = cars(app)
             val status = AppState.status
             val liveCar = cars.firstOrNull { status.phase != Phase.IDLE && status.carName == it.name && AppState.car.lastUpdateMillis > 0 }
             for (id in ids) {
                 val views = RemoteViews(app.packageName, R.layout.widget_car)
-                val chosen = carOf(app, id)?.let { a -> cars.firstOrNull { it.address.equals(a, ignoreCase = true) } }
-                // the chosen car; without one (or when it is gone), the car of the trip running now, otherwise the one that reported last
-                val car = chosen ?: liveCar ?: cars.maxByOrNull { readings[it.address.lowercase(Locale.ROOT)]?.atMs ?: Long.MIN_VALUE }
+                val picked = WidgetChoice.pick(carOf(app, id), cars.map { it.address }, liveCar?.address, readings.mapValues { it.value.atMs })
+                val car = cars.firstOrNull { it.address == picked }
                 val live = car != null && car == liveCar
                 val reading = car?.let { readings[it.address.lowercase(Locale.ROOT)] }
                 val values = if (live) AppState.car.snapshot() else reading?.values

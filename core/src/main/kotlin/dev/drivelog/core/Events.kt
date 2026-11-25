@@ -4,9 +4,6 @@ import dev.drivelog.carapi.Json
 
 import java.io.File
 import java.io.IOException
-import java.nio.file.AtomicMoveNotSupportedException
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
 import java.time.temporal.ChronoUnit
@@ -163,15 +160,15 @@ object EventCosts {
 }
 
 /** All cars' events in one small JSON file, keyed by Bluetooth address (case does not matter). */
-class FileCarEventsStore(private val file: File) {
+class FileCarEventsStore(private val file: File) : CarEventsStore {
 
     /** Newest first. */
     @Synchronized
-    fun list(address: String): List<CarEvent> = readAll()[address.lowercase(Locale.ROOT)].orEmpty().sortedByDescending { it.date }
+    override fun list(address: String): List<CarEvent> = readAll()[address.lowercase(Locale.ROOT)].orEmpty().sortedByDescending { it.date }
 
     @Synchronized
     @Throws(IOException::class)
-    fun save(address: String, event: CarEvent) {
+    override fun save(address: String, event: CarEvent) {
         val all = readAll()
         val key = address.lowercase(Locale.ROOT)
         all[key] = all[key].orEmpty().filter { it.id != event.id } + event
@@ -180,7 +177,7 @@ class FileCarEventsStore(private val file: File) {
 
     @Synchronized
     @Throws(IOException::class)
-    fun delete(address: String, id: String) {
+    override fun delete(address: String, id: String) {
         val all = readAll()
         val key = address.lowercase(Locale.ROOT)
         all[key] = all[key].orEmpty().filter { it.id != id }
@@ -189,7 +186,7 @@ class FileCarEventsStore(private val file: File) {
 
     @Synchronized
     @Throws(IOException::class)
-    fun removeCar(address: String) {
+    override fun removeCar(address: String) {
         val all = readAll()
         if (all.remove(address.lowercase(Locale.ROOT)) != null) write(all)
     }
@@ -197,7 +194,7 @@ class FileCarEventsStore(private val file: File) {
     /** Gives the events of [from] to [to] (for a car whose Bluetooth device was changed). */
     @Synchronized
     @Throws(IOException::class)
-    fun moveCar(from: String, to: String) {
+    override fun moveCar(from: String, to: String) {
         val all = readAll()
         val moved = all.remove(from.lowercase(Locale.ROOT)) ?: return
         val key = to.lowercase(Locale.ROOT)
@@ -253,13 +250,6 @@ class FileCarEventsStore(private val file: File) {
 
     private fun write(all: Map<String, List<CarEvent>>) {
         val json = Json.stringify(all.filterValues { it.isNotEmpty() }.mapValues { (_, list) -> list.map { toMap(it) } })
-        file.parentFile?.mkdirs()
-        val tmp = File(file.parentFile, file.name + ".tmp")
-        tmp.writeText(json)
-        try {
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-        } catch (e: AtomicMoveNotSupportedException) {
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
-        }
+        AtomicFile.writeText(file, json)
     }
 }

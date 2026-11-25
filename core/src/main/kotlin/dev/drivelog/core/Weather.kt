@@ -6,9 +6,6 @@ import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
-import java.nio.file.AtomicMoveNotSupportedException
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.util.Locale
 
 /** Which picture to show for the weather. */
@@ -205,14 +202,7 @@ class WeatherSource(
             m
         })
         try {
-            cacheFile.parentFile?.mkdirs()
-            val tmp = File(cacheFile.parentFile, cacheFile.name + ".tmp")
-            tmp.writeText(json)
-            try {
-                Files.move(tmp.toPath(), cacheFile.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-            } catch (e: AtomicMoveNotSupportedException) {
-                Files.move(tmp.toPath(), cacheFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
-            }
+            AtomicFile.writeText(cacheFile, json)
         } catch (e: IOException) {
             // The cache is only a convenience
         }

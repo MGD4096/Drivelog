@@ -69,7 +69,7 @@ class LastReadingTest {
         store.moveCar("aa:01", "CC:03")
         assertNull(store.get("AA:01"))
         assertEquals(full, store.get("CC:03")!!.values)
-        store.remove("cc:03")
+        store.removeCar("cc:03")
         assertTrue(store.all().isEmpty())
     }
 

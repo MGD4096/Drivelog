@@ -4,9 +4,6 @@ import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
-import java.nio.file.AtomicMoveNotSupportedException
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 /**
  * Where map tiles come from. The default is OpenStreetMap's own tile server, whose usage policy
@@ -118,15 +115,7 @@ class DiskTileCache(
     fun put(z: Int, x: Int, y: Int, bytes: ByteArray) {
         val target = file(z, x, y)
         try {
-            target.parentFile?.mkdirs()
-            val temporary = File(target.parentFile, target.name + ".tmp")
-            temporary.writeBytes(bytes)
-            temporary.setLastModified(clock())
-            try {
-                Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-            } catch (e: AtomicMoveNotSupportedException) {
-                Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
-            }
+            AtomicFile.write(target, bytes, clock())
         } catch (e: IOException) {
             return      // a full or unwritable disk only means the tile is fetched again next time
         }

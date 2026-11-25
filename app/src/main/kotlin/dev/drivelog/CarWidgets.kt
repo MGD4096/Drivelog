@@ -229,8 +229,8 @@ class CarWidgets(
         icon.alpha = 0.35f
 
         WeatherLoader.executor.execute {
-            val place = try { locate() } catch (e: Exception) { null }
-            val result = if (place == null) null else try { WeatherLoader.source(activity).get(place.first, place.second) } catch (e: Exception) { null }
+            val place = try { locate() } catch (e: SecurityException) { null }      // location permission taken back
+            val result = if (place == null) null else WeatherLoader.source(activity).get(place.first, place.second)      // network and cache errors are handled inside
             activity.runOnUiThread {
                 if (activity.isDestroyed) return@runOnUiThread
                 if (place == null) {

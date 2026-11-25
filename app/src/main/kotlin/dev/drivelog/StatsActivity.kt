@@ -18,16 +18,11 @@ import android.widget.ScrollView
 import android.widget.TextView
 import dev.drivelog.core.CarEvent
 import dev.drivelog.core.CounterFuel
-import dev.drivelog.core.FileCarDetailsStore
-import dev.drivelog.core.FileCarEventsStore
-import dev.drivelog.core.FileFuelStore
-import dev.drivelog.core.FileTripStore
 import dev.drivelog.core.FuelEntry
 import dev.drivelog.core.MonthStats
 import dev.drivelog.core.MonthlyStats
 import dev.drivelog.core.TripMeta
 import dev.drivelog.core.tr
-import java.io.File
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -38,6 +33,7 @@ import java.util.concurrent.Executors
  * one before. One car ([CarActivity.EXTRA_ADDRESS]) or, without it, all cars together.
  */
 class StatsActivity : Activity() {
+    private val stores by lazy { Stores(this) }
 
     private val io = Executors.newSingleThreadExecutor()
     private lateinit var ui: Ui
@@ -54,7 +50,7 @@ class StatsActivity : Activity() {
         ui = Ui(this)
         address = intent.getStringExtra(CarActivity.EXTRA_ADDRESS)
         val car = address?.let { a -> Prefs.cars(this).firstOrNull { it.address.equals(a, true) } }
-        val name = car?.let { c -> FileCarDetailsStore(File(filesDir, "cars.json")).get(c.address).model ?: c.name }
+        val name = car?.let { c -> stores.carName(c.address, c.name) }
         box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -84,16 +80,16 @@ class StatsActivity : Activity() {
     override fun onResume() {
         super.onResume()
         io.execute {
-            val all = try { FileTripStore(File(filesDir, "trips")).list() } catch (e: Exception) { emptyList() }
+            val all = stores.trips?.list() ?: emptyList()
             val cars = address?.let { listOf(it) } ?: Prefs.cars(this).map { it.address }
             val trips = all.filter { t -> address == null || t.carId.equals(address, true) }
-            val fuelStore = FileFuelStore(File(filesDir, FileFuelStore.FILE_NAME))
-            val events = FileCarEventsStore(File(filesDir, "car_events.json"))
+            val fuelStore = stores.fuel
+            val events = stores.events
             val fuel = ArrayList<FuelEntry>()
             val log = ArrayList<CarEvent>()
             for (c in cars) {
-                fuel += try { fuelStore.list(c) } catch (e: Exception) { emptyList() }
-                log += try { events.list(c) } catch (e: Exception) { emptyList() }
+                fuel += fuelStore.list(c)
+                log += events.list(c)
             }
             val factors = trips.groupBy { it.carId.lowercase(Locale.ROOT) }.mapValues { CounterFuel.factor(it.value) }
             val result = MonthlyStats.of(trips, fuel, log, YearMonth.now(), 12, { t: TripMeta -> factors[t.carId.lowercase(Locale.ROOT)] ?: 1.0 })

@@ -15,7 +15,7 @@ import android.widget.Toast
 import dev.drivelog.core.CarEvent
 import dev.drivelog.core.DetectedRefuel
 import dev.drivelog.core.EventCosts
-import dev.drivelog.core.FileFuelStore
+import dev.drivelog.core.FuelStore
 import dev.drivelog.core.FuelEntry
 import dev.drivelog.core.FuelLog
 import dev.drivelog.core.TripMeta
@@ -29,7 +29,7 @@ import java.time.ZoneId
  * The fuel part of the car page: refuellings the car's tank level suggests (only the price is left to type), the
  * consumption from one full tank to the next, the price of fuel and what a kilometre costs, and the list of entries.
  */
-class FuelPanel(private val activity: Activity, private val ui: Ui, private val store: FileFuelStore) {
+class FuelPanel(private val activity: Activity, private val ui: Ui, private val store: FuelStore) {
 
     /** [trips] are this car's, [events] its service log; [onChanged] reloads the page after a change. */
     fun build(carId: String, trips: List<TripMeta>, entries: List<FuelEntry>, events: List<CarEvent>, year: Int, onChanged: () -> Unit): View {

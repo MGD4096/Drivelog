@@ -16,11 +16,9 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import dev.drivelog.core.FileTripStore
 import dev.drivelog.core.TrackPoint
 import dev.drivelog.core.Trip
 import dev.drivelog.core.TripStats
-import java.io.File
 import java.io.IOException
 import java.util.Locale
 import java.util.concurrent.Executors
@@ -31,6 +29,7 @@ import dev.drivelog.core.tr
  * ([EXTRA_LAT], [EXTRA_LON], [EXTRA_LABEL]: where a car is parked).
  */
 class MapActivity : Activity() {
+    private val stores by lazy { Stores(this) }
 
     private lateinit var mapView: MapView
     private lateinit var info: TextView
@@ -116,7 +115,7 @@ class MapActivity : Activity() {
 
     private fun loadTrip(id: String) {
         loader.execute {
-            val trip: Trip? = try { FileTripStore(File(filesDir, "trips")).load(id) } catch (e: IOException) { null }
+            val trip: Trip? = try { stores.requireTrips().load(id) } catch (e: IOException) { null }
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread
                 if (trip == null || trip.points.isEmpty()) {
@@ -139,7 +138,7 @@ class MapActivity : Activity() {
 
     /** The car's model when it has one, otherwise the name of its Bluetooth device. */
     private fun carLabel(trip: Trip): String =
-        try { dev.drivelog.core.FileCarDetailsStore(File(filesDir, "cars.json")).get(trip.carId).model?.takeIf { it.isNotBlank() } } catch (e: Exception) { null } ?: trip.carName
+        stores.carName(trip.carId, trip.carName)
 
     private fun panel() = GradientDrawable().apply {
         setColor(if (Colors.dark) Color.argb(235, 0x24, 0x27, 0x2C) else Color.argb(235, 255, 255, 255))

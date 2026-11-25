@@ -3,6 +3,7 @@ package dev.drivelog
 import android.content.Context
 import android.location.Geocoder
 import java.util.Locale
+import java.io.IOException
 
 /**
  * Place names for the mileage log's route, from the phone's own geocoder (Android's, which asks the phone's location
@@ -16,7 +17,9 @@ object Places {
         fun place(lat: Double, lon: Double): android.location.Address? = try {
             @Suppress("DEPRECATION")
             geocoder.getFromLocation(lat, lon, 1)?.firstOrNull()
-        } catch (e: Exception) {
+        } catch (e: IOException) {          // no network or the service is busy
+            null
+        } catch (e: IllegalArgumentException) {
             null
         }
         val a = place(fromLat, fromLon) ?: return null

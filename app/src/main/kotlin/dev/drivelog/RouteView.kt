@@ -7,7 +7,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.view.View
-import dev.drivelog.core.FileTripStore
+import dev.drivelog.core.TripLoader
 import dev.drivelog.core.LatLon
 import dev.drivelog.core.RouteCache
 import dev.drivelog.core.RouteShape
@@ -66,18 +66,18 @@ object RouteLoader {
 
     @Synchronized
     private fun cache(context: Context): RouteCache =
-        cache ?: RouteCache(File(context.applicationContext.filesDir, "routes.json")).also { cache = it }
+        cache ?: RouteCache(File(context.applicationContext.filesDir, Stores.ROUTES)).also { cache = it }
 
     fun forget(context: Context, id: String) = cache(context).remove(id)
 
     /** Calls [show] on the main thread; not at all when the trip has no track or the screen is gone. */
-    fun load(activity: Activity, store: FileTripStore?, id: String, io: ExecutorService, show: (List<LatLon>) -> Unit) {
+    fun load(activity: Activity, store: TripLoader?, id: String, io: ExecutorService, show: (List<LatLon>) -> Unit) {
         val c = cache(activity)
         try {
             io.execute {
                 var shape = c.get(id)
                 if (shape == null) {
-                    val trip = try { store?.load(id) } catch (e: Exception) { null }
+                    val trip = store?.load(id)
                     if (trip != null) {
                         shape = RouteShape.simplify(trip.points)
                         if (shape.size >= 2) c.put(id, shape)

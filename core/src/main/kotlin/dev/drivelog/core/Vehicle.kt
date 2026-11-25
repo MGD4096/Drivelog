@@ -4,9 +4,6 @@ import dev.drivelog.carapi.Json
 
 import java.io.File
 import java.io.IOException
-import java.nio.file.AtomicMoveNotSupportedException
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -282,7 +279,7 @@ data class LastKnownCar(
          * Looks at the car's latest trips (up to [LOOK_BACK]) for ones that ended with a fuel or range reading, or with
          * a doors-and-windows state. Reads trip files, so call it from a background thread.
          */
-        fun find(carId: String, trips: List<TripMeta>, store: FileTripStore): LastKnownCar? {
+        fun find(carId: String, trips: List<TripMeta>, store: TripLoader): LastKnownCar? {
             val mine = trips.filter { it.carId.equals(carId, ignoreCase = true) }.sortedByDescending { it.endMs }.take(LOOK_BACK)
             var fuel: Pair<CarSnapshot, Long>? = null
             var parts: Pair<List<String>, Long>? = null
@@ -381,10 +378,10 @@ object CarOrder {
 }
 
 /** The details of all cars in one small JSON file, keyed by Bluetooth address (case does not matter). */
-class FileCarDetailsStore(private val file: File) {
+class FileCarDetailsStore(private val file: File) : CarDetailsStore {
 
     @Synchronized
-    fun all(): Map<String, CarDetails> {
+    override fun all(): Map<String, CarDetails> {
         val text = try { if (file.isFile) file.readText() else null } catch (e: IOException) { null } ?: return emptyMap()
         val root = try { Json.parseObject(text) } catch (e: Json.JsonException) { null } ?: return emptyMap()
         val out = LinkedHashMap<String, CarDetails>()
@@ -412,11 +409,11 @@ class FileCarDetailsStore(private val file: File) {
     }
 
     @Synchronized
-    fun get(address: String): CarDetails = all()[address.lowercase(Locale.ROOT)] ?: CarDetails()
+    override fun get(address: String): CarDetails = all()[address.lowercase(Locale.ROOT)] ?: CarDetails()
 
     @Synchronized
     @Throws(IOException::class)
-    fun put(address: String, details: CarDetails) {
+    override fun put(address: String, details: CarDetails) {
         val map = LinkedHashMap(all())
         if (details.isEmpty) map.remove(address.lowercase(Locale.ROOT)) else map[address.lowercase(Locale.ROOT)] = details
         write(map)
@@ -424,12 +421,12 @@ class FileCarDetailsStore(private val file: File) {
 
     @Synchronized
     @Throws(IOException::class)
-    fun remove(address: String) = put(address, CarDetails())
+    override fun removeCar(address: String) = put(address, CarDetails())
 
     /** Gives the details of [from] to [to] (for a car whose Bluetooth device was changed). */
     @Synchronized
     @Throws(IOException::class)
-    fun moveCar(from: String, to: String) {
+    override fun moveCar(from: String, to: String) {
         val map = LinkedHashMap(all())
         val d = map.remove(from.lowercase(Locale.ROOT)) ?: return
         map[to.lowercase(Locale.ROOT)] = d
@@ -460,13 +457,6 @@ class FileCarDetailsStore(private val file: File) {
                 m
             }
         )
-        file.parentFile?.mkdirs()
-        val tmp = File(file.parentFile, file.name + ".tmp")
-        tmp.writeText(json)
-        try {
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-        } catch (e: AtomicMoveNotSupportedException) {
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
-        }
+        AtomicFile.writeText(file, json)
     }
 }

@@ -22,12 +22,12 @@ object CarHealth {
      * the car stood, which says most about the battery), or at its end when the start had none. Reads trip files, so
      * call it from a background thread.
      */
-    fun batteryHistory(carId: String, trips: List<TripMeta>, store: FileTripStore, max: Int = HISTORY_TRIPS): List<BatteryReading> =
+    fun batteryHistory(carId: String, trips: List<TripMeta>, store: TripLoader, max: Int = HISTORY_TRIPS): List<BatteryReading> =
         trips.filter { it.carId.equals(carId, ignoreCase = true) }
             .sortedByDescending { it.startMs }
             .asSequence()
             .mapNotNull { meta ->
-                val trip = try { store.load(meta.id) } catch (e: Exception) { null } ?: return@mapNotNull null
+                val trip = store.load(meta.id) ?: return@mapNotNull null
                 val pct = trip.startCar.batteryPercent ?: trip.endCar.batteryPercent ?: return@mapNotNull null
                 BatteryReading(meta.startMs, pct)
             }

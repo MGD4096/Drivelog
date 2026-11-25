@@ -15,14 +15,11 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Toast
 import dev.drivelog.core.DueLevel
-import dev.drivelog.core.FileCarDetailsStore
 import dev.drivelog.core.EventType
-import dev.drivelog.core.FileCarEventsStore
 import dev.drivelog.core.LastKnownCar
 import dev.drivelog.core.Reminders
 import dev.drivelog.core.TripMeta
 import dev.drivelog.core.VehicleSummary
-import java.io.File
 import java.time.LocalDate
 import java.util.Locale
 import java.util.concurrent.ExecutorService
@@ -38,9 +35,10 @@ class CarsScreen(
     private val ui: Ui,
     io: ExecutorService,
 ) {
-    private val details = FileCarDetailsStore(File(activity.filesDir, "cars.json"))
-    private val readings = dev.drivelog.core.FileLastReadingStore(File(activity.filesDir, dev.drivelog.core.FileLastReadingStore.FILE_NAME))
-    private val events = FileCarEventsStore(File(activity.filesDir, "car_events.json"))
+    private val stores = Stores(activity)
+    private val details = stores.details
+    private val readings = stores.readings
+    private val events = stores.events
     private val widgets = CarWidgets(activity, ui, io)
     private val list = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
     private var trips: List<TripMeta> = emptyList()
