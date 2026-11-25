@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 12 V battery with its two terminals, for the home-screen widget. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="@color/widget_text" android:pathData="M5,4.5h4v2H5zM15,4.5h4v2h-4zM6,12.75h4v1.5H6zM7.25,11.5h1.5v4h-1.5zM14,12.75h4v1.5h-4z" />
+    <path android:fillColor="@color/widget_text" android:fillType="evenOdd" android:pathData="M2,6.5h20v13H2zM4,8.5v9h16v-9z" />
+</vector>

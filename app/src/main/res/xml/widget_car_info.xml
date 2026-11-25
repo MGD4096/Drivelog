@@ -2,11 +2,11 @@
 <!-- Updated by the app whenever new car values are saved; updatePeriodMillis only refreshes "how long ago". -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="180dp"
-    android:minHeight="110dp"
+    android:minHeight="140dp"
     android:targetCellWidth="3"
     android:targetCellHeight="2"
     android:minResizeWidth="140dp"
-    android:minResizeHeight="90dp"
+    android:minResizeHeight="120dp"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_car"

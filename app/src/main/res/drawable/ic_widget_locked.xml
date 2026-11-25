@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Closed padlock: every door, window and lid of the car is closed (widget). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="@color/widget_text" android:pathData="M7,10V7a5,5 0,0 1,10 0v3h-2V7a3,3 0,0 0,-6 0v3z" />
+    <path android:fillColor="@color/widget_text" android:fillType="evenOdd" android:pathData="M5,10h14v11H5zM11,13.5v4h2v-4z" />
+</vector>

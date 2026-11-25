@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Open padlock: something on the car is open (widget). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="@color/widget_text" android:pathData="M17,10V7a5,5 0,0 0,-10 0v1h2V7a3,3 0,0 1,6 0v3z" />
+    <path android:fillColor="@color/widget_text" android:fillType="evenOdd" android:pathData="M5,10h14v11H5zM11,13.5v4h2v-4z" />
+</vector>

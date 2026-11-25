@@ -340,6 +340,7 @@ object Polish {
         "Zoom out" to "Oddal",
         "at the end of the trip on {0}" to "na koniec przejazdu {0}",
         "last read {0}" to "ostatni odczyt {0}",
+        "last read\n{0}" to "ostatni odczyt\n{0}",
         "at the parking spot" to "na miejscu postoju",
         "at your location" to "w Twojej lokalizacji",
         "at {0} km" to "przy {0} km",

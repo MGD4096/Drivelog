@@ -5,4 +5,6 @@
     <color name="widget_title">#0D47A1</color>
     <color name="widget_text">#212121</color>
     <color name="widget_muted">#757575</color>
+    <!-- a low battery, something open, a tyre warning -->
+    <color name="widget_alert">#C62828</color>
 </resources>
