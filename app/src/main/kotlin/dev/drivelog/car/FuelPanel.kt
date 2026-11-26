@@ -13,6 +13,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
 import dev.drivelog.AppSettings
+import dev.drivelog.CarWidget
 import dev.drivelog.Colors
 import dev.drivelog.Ui
 import dev.drivelog.core.car.CarEvent
@@ -192,6 +193,7 @@ class FuelPanel(private val activity: Activity, private val ui: Ui, private val 
             .setNegativeButton(tr("Cancel"), null)
         if (existing != null) builder.setNeutralButton(tr("Delete")) { _, _ ->
             try { store.delete(carId, existing.id) } catch (e: IOException) { toast(tr("Could not save: {0}", e.message)) }
+            CarWidget.update(activity)                    // the fuel and the month widgets show the refuellings
             onSaved()
         }
         val dialog = builder.create()
@@ -219,6 +221,7 @@ class FuelPanel(private val activity: Activity, private val ui: Ui, private val 
                 return@setOnClickListener
             }
             dialog.dismiss()
+            CarWidget.update(activity)
             onSaved()
         }
     }

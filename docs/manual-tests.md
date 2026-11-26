@@ -63,6 +63,15 @@ Legend: **[phone]** needs only the phone, **[car]** needs the car (or its head u
 - [ ] [car] During a trip it says "live" and updates.
 - [ ] [phone] The "Drivelog: vehicles" widget asks which vehicles (up to 3, more are refused); a tile each, side by side, with its
       picture (a motorcycle its drawing), fuel, range, 12 V and Closed/Open, the time; tapping a tile opens that vehicle.
+- [ ] [phone] The "Drivelog: services" widget lists what comes up on all vehicles, most pressing first (overdue red,
+      soon orange); adding or deleting a service log entry updates it; tapping a row opens that vehicle.
+- [ ] [phone] "Drivelog: last trip": the latest trip's route on a map (also offline from the tile cache), distance,
+      time, speed, consumption; tapping opens the route on the full map. Updates after a trip.
+- [ ] [phone] "Drivelog: parked" asks which vehicle; map with a pin and since when; tapping offers navigation there.
+- [ ] [phone] "Drivelog: this month": km and the change against last month, business/private km, fuel and service
+      money, per km; tapping opens the statistics. Updates after a trip, a refuelling, a service entry.
+- [ ] [phone] "Drivelog: fuel" asks which vehicle; average over the latest full tanks, the tank and range, the last
+      refuelling and its price, the year's fuel bill per km. Updates after a refuelling.
 - [ ] [phone] Both widgets update together after a trip or a reading from the motorcycle plugin.
 
 ## 6. Settings and data

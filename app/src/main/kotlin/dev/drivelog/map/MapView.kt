@@ -69,7 +69,7 @@ class MapView(
     @Volatile private var released = false
 
     private val dark = Colors.dark
-    private val tilePaint = Paint(Paint.FILTER_BITMAP_FLAG).apply { if (dark) colorFilter = darkTiles() }
+    private val tilePaint = Paint(Paint.FILTER_BITMAP_FLAG).apply { if (dark) colorFilter = MapResources.darkTiles() }
     private val groundColor = if (dark) Color.rgb(0x1B, 0x1D, 0x21) else Color.rgb(0xE8, 0xE4, 0xDC)
     private val emptyTilePaint = Paint().apply { color = groundColor }
     private val casingPaint = line(if (dark) Color.rgb(0x10, 0x11, 0x14) else Color.WHITE, 8f)
@@ -82,23 +82,6 @@ class MapView(
     private val textBackground = Paint().apply { color = if (dark) Color.argb(210, 0x1B, 0x1D, 0x21) else Color.argb(200, 255, 255, 255) }
     private val legendPaint = Paint()
     private val legendTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 11f * density; color = if (dark) Color.rgb(0xEE, 0xEE, 0xEE) else Color.rgb(0x22, 0x22, 0x22) }
-
-    /** Dark tiles: hue turned half way round and brightness inverted, so water stays blue and parks stay green. */
-    private fun darkTiles(): ColorMatrixColorFilter {
-        val m = ColorMatrix(floatArrayOf(
-            -0.574f, 1.430f, 0.144f, 0f, 0f,
-            0.426f, 0.430f, 0.144f, 0f, 0f,
-            0.426f, 1.430f, -0.856f, 0f, 0f,
-            0f, 0f, 0f, 1f, 0f
-        ))
-        m.postConcat(ColorMatrix(floatArrayOf(
-            -0.9f, 0f, 0f, 0f, 230f,
-            0f, -0.9f, 0f, 0f, 230f,
-            0f, 0f, -0.9f, 0f, 230f,
-            0f, 0f, 0f, 1f, 0f
-        )))
-        return ColorMatrixColorFilter(m)
-    }
 
     private fun line(color: Int, widthDp: Float) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.color = color

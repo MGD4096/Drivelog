@@ -102,6 +102,33 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_cars_info" />
         </receiver>
 
+        <!-- The services coming up (ServicesWidget). Like CarWidget: never rename or move it. -->
+        <receiver android:name=".ServicesWidget" android:exported="true" android:label="@string/widget_services_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_services_info" />
+        </receiver>
+
+        <!-- The last trip, where a vehicle is parked, this month, fuel (LastTripWidget, ParkingWidget, MonthWidget,
+             FuelWidget). Like CarWidget: never rename or move them. -->
+        <receiver android:name=".LastTripWidget" android:exported="true" android:label="@string/widget_last_trip_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_last_trip_info" />
+        </receiver>
+        <receiver android:name=".ParkingWidget" android:exported="true" android:label="@string/widget_parking_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_parking_info" />
+        </receiver>
+        <receiver android:name=".MonthWidget" android:exported="true" android:label="@string/widget_month_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_month_info" />
+        </receiver>
+        <receiver android:name=".FuelWidget" android:exported="true" android:label="@string/widget_fuel_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_fuel_info" />
+        </receiver>
+
         <!-- The Business / Private buttons of the "Trip finished" notification. -->
         <receiver android:name=".recording.TripKindReceiver" android:exported="false" />
 

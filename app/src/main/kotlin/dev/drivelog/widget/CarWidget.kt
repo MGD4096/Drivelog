@@ -23,6 +23,7 @@ import dev.drivelog.core.car.VehicleKind
 import dev.drivelog.core.car.Silhouette
 import dev.drivelog.core.car.WidgetChoice
 import dev.drivelog.core.text.tr
+import dev.drivelog.core.trip.TripMeta
 import java.util.Locale
 
 /**
@@ -54,6 +55,23 @@ class CarWidget : AppWidgetProvider() {
             return Prefs.cars(context).filter { val d = details.get(it.address); !d.archived && d.usesPlugin }
         }
 
+        /** The vehicles the parking and fuel widgets can show: every followed one in use, with a plugin or without. */
+        fun vehicles(context: Context): List<CarRef> {
+            val details = Stores(context).details
+            return Prefs.cars(context).filter { !details.get(it.address).archived }
+        }
+
+        /**
+         * The vehicle a parking or fuel widget [id] shows: the one picked for it ([setCar]), or else the one whose latest
+         * trip ended last (null when there is none).
+         */
+        fun vehicleOf(context: Context, id: Int, vehicles: List<CarRef>, trips: List<TripMeta>): CarRef? {
+            val picked = carOf(context, id)
+            vehicles.firstOrNull { it.address.equals(picked, ignoreCase = true) }?.let { return it }
+            val latest = trips.filter { t -> vehicles.any { it.address.equals(t.carId, ignoreCase = true) } }.maxByOrNull { it.endMs }
+            return vehicles.firstOrNull { it.address.equals(latest?.carId, ignoreCase = true) } ?: vehicles.firstOrNull()
+        }
+
         /** The car (its address) widget [id] shows, or null: the car that reported last. */
         fun carOf(context: Context, id: Int): String? = prefs(context).getString(KEY_CAR + id, null)
 
@@ -67,6 +85,11 @@ class CarWidget : AppWidgetProvider() {
             val ids = manager.getAppWidgetIds(ComponentName(context, CarWidget::class.java))
             if (ids.isNotEmpty()) render(context, manager, ids)
             CarsWidget.update(context)
+            ServicesWidget.update(context)
+            LastTripWidget.update(context)
+            ParkingWidget.update(context)
+            MonthWidget.update(context)
+            FuelWidget.update(context)
         }
 
         /**

@@ -129,8 +129,9 @@ class CarsScreen(
         card.addView(ui.body().apply {
             setPadding(0, ui.dp(8), 0, 0)
             text = buildString {
-                append(tr("Odometer: ")).append(widgets.odometerText(car, s, d)).append('\n')
-                if (d.usesPlugin) append(tr("Fuel: ")).append(widgets.fuelText(car, known[car.address.lowercase(Locale.ROOT)])).append('\n')
+                // without when the values were read (the car's page says); a typed-in odometer with its date
+                append(tr("Odometer: ")).append(widgets.odometerText(car, s, d, withWhen = false)).append('\n')
+                if (d.usesPlugin) append(tr("Fuel: ")).append(widgets.fuelText(car, known[car.address.lowercase(Locale.ROOT)], withWhen = false)).append('\n')
                 if (d.usesPlugin) {
                     val doors = widgets.doorsStatus(car, known[car.address.lowercase(Locale.ROOT)])
                     if (doors.closed != null) append(tr("Doors and windows: ")).append(doors.text).append('\n')

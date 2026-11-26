@@ -16,6 +16,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import dev.drivelog.Colors
 import dev.drivelog.R
+import dev.drivelog.CarWidget
 import dev.drivelog.Ui
 import dev.drivelog.core.car.CarEvent
 import dev.drivelog.core.car.CarInput
@@ -247,6 +248,7 @@ class ServiceLogPanel(
                 return@setOnClickListener
             }
             dialog.dismiss()
+            CarWidget.update(activity)          // the services and the month widgets show the log
             onChanged()
         }
     }
@@ -257,6 +259,7 @@ class ServiceLogPanel(
             .setMessage("${ui.date(e.date)}  ·  ${e.displayTitle}")
             .setPositiveButton(tr("Delete")) { _, _ ->
                 try { events.delete(address, e.id) } catch (x: IOException) { ui.toast(tr("Could not delete: {0}", x.message)) }
+                CarWidget.update(activity)          // the services and the month widgets show the log
                 onChanged()
             }
             .setNegativeButton(tr("Cancel"), null)

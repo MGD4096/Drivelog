@@ -4,6 +4,7 @@ import android.content.Context
 import dev.drivelog.core.car.DetectedRefuel
 import dev.drivelog.core.car.ReminderSettings
 import dev.drivelog.core.text.Lang
+import dev.drivelog.core.text.Texts
 
 /** The few things the person can set in the app's settings screen. */
 object AppSettings {
@@ -48,10 +49,22 @@ object AppSettings {
 
     fun setTheme(c: Context, choice: String) = prefs(c).edit().putString(KEY_THEME, choice).apply()
 
+    /** The texts of the language last used, kept: the widgets apply the language every time they draw. */
+    private var texts: Pair<String, Texts>? = null
+
+    /** English needs none (the code's own texts); any other language is read from the string resources once. */
+    @Synchronized
+    private fun textsFor(c: Context, code: String): Texts {
+        if (code == "en") return Texts.ENGLISH
+        texts?.let { if (it.first == code) return it.second }
+        return ResourceTexts(c.applicationContext, code).also { texts = code to it }
+    }
+
     /** Makes the app's texts, dates and numbers use the chosen language; call at start and after a change. */
     fun applyLanguage(c: Context) {
         val phone = android.content.res.Resources.getSystem().configuration.locales[0]
         val code = Lang.resolve(language(c), phone.language)
+        Lang.texts = textsFor(c, code)
         Lang.code = code
         // Dates and numbers: the phone's own style, unless a language was picked here
         java.util.Locale.setDefault(if (language(c) == Lang.SYSTEM) phone else java.util.Locale(code, if (code == "pl") "PL" else ""))

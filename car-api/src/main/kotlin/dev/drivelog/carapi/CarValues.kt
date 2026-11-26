@@ -43,7 +43,8 @@ data class CarValues(
     val tyrePressuresBar: List<Double>? = null,
 ) {
     /**
-     * The same values with everything implausible dropped (another app sends them, so they are not trusted): numbers
+     * The same values with everything implausible dropped (another app sen
+     * ds them, so they are not trusted): numbers
      * outside the ranges below, and open-part labels that are not in [PART_LABELS].
      */
     fun checked(): CarValues = CarValues(

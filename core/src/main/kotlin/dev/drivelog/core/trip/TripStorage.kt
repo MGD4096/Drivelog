@@ -23,6 +23,17 @@ data class TripMeta(
 object TripJson {
     private const val VERSION = 1
 
+    /**
+     * How the summary in a meta file was worked out. Raise it when [TripStats.summarize] changes in a way saved trips
+     * should follow: [FileTripStore.list] works out older ones again from their tracks. 2: the car's moving time is
+     * checked against its top speed. 3: GPS first for the top speed and the moving time, the car only without a track.
+     */
+    const val SUMMARY_VERSION = 3
+
+    /** The [SUMMARY_VERSION] of a meta file's text; 1 for files from before it was written down. */
+    fun summaryVersion(text: String): Int =
+        ((try { Json.parseObject(text) } catch (e: Json.JsonException) { null })?.get("sv") as? Double)?.toInt() ?: 1
+
     // ---- trip ----------------------------------------------------------------------------------------------------
 
     fun toJson(trip: Trip): String = Json.stringify(
@@ -121,6 +132,7 @@ object TripJson {
         return Json.stringify(
             linkedMapOf(
                 "v" to VERSION,
+                "sv" to SUMMARY_VERSION,
                 "id" to meta.id,
                 "carId" to meta.carId,
                 "carName" to meta.carName,
@@ -218,11 +230,22 @@ class FileTripStore(private val dir: File) : TripStore {
         return meta
     }
 
-    /** Newest first. Unreadable entries are skipped. */
+    /**
+     * Newest first. Unreadable entries are skipped. A summary worked out by an older version of the app
+     * ([TripJson.SUMMARY_VERSION]) is worked out again from the trip's track and saved, once.
+     */
     override fun list(): List<TripMeta> =
         (dir.listFiles { f -> f.name.endsWith(META_SUFFIX) } ?: emptyArray())
-            .mapNotNull { f -> try { TripJson.metaFromJson(f.readText()) } catch (e: IOException) { null } }
+            .mapNotNull { f -> try { read(f) } catch (e: IOException) { null } }
             .sortedByDescending { it.startMs }
+
+    private fun read(f: File): TripMeta? {
+        val text = f.readText()
+        val meta = TripJson.metaFromJson(text) ?: return null
+        if (TripJson.summaryVersion(text) >= TripJson.SUMMARY_VERSION) return meta
+        val trip = load(meta.id) ?: return meta
+        return try { save(trip) } catch (e: IOException) { meta }
+    }
 
     override fun load(id: String): Trip? {
         if (!validId(id)) return null

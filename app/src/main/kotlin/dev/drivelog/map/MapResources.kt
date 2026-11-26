@@ -1,6 +1,8 @@
 package dev.drivelog.map
 
 import android.content.Context
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import dev.drivelog.core.map.DiskTileCache
 import dev.drivelog.core.map.TileFetcher
 import dev.drivelog.core.map.TileProvider
@@ -28,4 +30,21 @@ object MapResources {
             DiskTileCache(File(context.applicationContext.cacheDir, "tiles"), 64L * 1024 * 1024),
             TileFetcher(provider),
         ).also { source = it }
+
+    /** Dark tiles: hue turned half way round and brightness inverted, so water stays blue and parks stay green. */
+    fun darkTiles(): ColorMatrixColorFilter {
+        val m = ColorMatrix(floatArrayOf(
+            -0.574f, 1.430f, 0.144f, 0f, 0f,
+            0.426f, 0.430f, 0.144f, 0f, 0f,
+            0.426f, 1.430f, -0.856f, 0f, 0f,
+            0f, 0f, 0f, 1f, 0f
+        ))
+        m.postConcat(ColorMatrix(floatArrayOf(
+            -0.9f, 0f, 0f, 0f, 230f,
+            0f, -0.9f, 0f, 0f, 230f,
+            0f, 0f, -0.9f, 0f, 230f,
+            0f, 0f, 0f, 1f, 0f
+        )))
+        return ColorMatrixColorFilter(m)
+    }
 }

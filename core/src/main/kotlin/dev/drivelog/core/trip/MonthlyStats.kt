@@ -60,6 +60,15 @@ object MonthlyStats {
         }
     }
 
+    /**
+     * The kilometres of [month] by kind for the mileage log: business and private (a trip nobody marked counts as
+     * private, [TripLog.kindOrDefault]). For the month summary widget.
+     */
+    fun kmByKind(trips: List<TripMeta>, month: YearMonth, zone: ZoneId = ZoneId.systemDefault()): Map<TripKind, Double> {
+        val mine = trips.filter { YearMonth.from(Instant.ofEpochMilli(it.startMs).atZone(zone)) == month }
+        return TripKind.values().associateWith { kind -> mine.filter { it.log.kindOrDefault == kind }.sumOf { it.summary.distanceKm } }
+    }
+
     /** How [now] compares with [before], as a fraction (0.25 = 25 % more); null when [before] is zero. */
     fun change(now: Double, before: Double): Double? = if (before == 0.0) null else (now - before) / before
 }

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The services coming up (ServicesWidget). Redrawn by the app when the service log or an odometer changes; the
+     period only moves "days left" on (Android keeps it to at least 30 minutes). -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
+    android:minHeight="140dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:minResizeWidth="140dp"
+    android:minResizeHeight="90dp"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="10800000"
+    android:initialLayout="@layout/widget_services"
+    android:previewLayout="@layout/widget_services"
+    android:description="@string/widget_services_description"
+    android:widgetCategory="home_screen" />

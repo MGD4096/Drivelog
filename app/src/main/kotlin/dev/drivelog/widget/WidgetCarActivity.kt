@@ -26,13 +26,17 @@ class WidgetCarActivity : Activity() {
         Colors.init(this)
         AppSettings.applyLanguage(this)
         val stores = Stores(this)
-        val cars = CarWidget.cars(this)
-        val names = listOf(tr("The car that reported last")) + cars.map { stores.carName(it.address, it.name) }
+        // the car-values widget lists the vehicles with a plugin; the parking and fuel widgets every vehicle in use
+        val provider = AppWidgetManager.getInstance(this).getAppWidgetInfo(id)?.provider?.className
+        val forValues = provider == null || provider == CarWidget::class.java.name
+        val cars = if (forValues) CarWidget.cars(this) else CarWidget.vehicles(this)
+        val first = if (forValues) tr("The car that reported last") else tr("The vehicle used last")
+        val names = listOf(first) + cars.map { stores.carName(it.address, it.name) }
         val current = CarWidget.carOf(this, id)
         val checked = cars.indexOfFirst { it.address.equals(current, ignoreCase = true) } + 1
         val theme = if (Colors.dark) android.R.style.Theme_DeviceDefault_Dialog_Alert else android.R.style.Theme_DeviceDefault_Light_Dialog_Alert
         AlertDialog.Builder(this, theme)
-            .setTitle(tr("Which car should the widget show?"))
+            .setTitle(if (forValues) tr("Which car should the widget show?") else tr("Which vehicle should the widget show?"))
             .setSingleChoiceItems(names.toTypedArray(), checked) { dialog, i ->
                 CarWidget.setCar(this, id, if (i == 0) null else cars[i - 1].address)
                 CarWidget.update(this)

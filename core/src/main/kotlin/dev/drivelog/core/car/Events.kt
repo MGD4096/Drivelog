@@ -115,6 +115,29 @@ object Reminders {
         }
         return result.sortedWith(compareBy<Due> { it.level.ordinal }.thenBy { it.daysLeft ?: Long.MAX_VALUE })
     }
+
+    /** How far ahead the services widget looks: about two months. */
+    const val WIDGET_DAYS = 61L
+
+    /**
+     * What comes up next on all [cars] together, most pressing first: overdue, then soon, then the rest; within that by
+     * days left (a limit in kilometres only comes after the dates), then by kilometres left. For the services widget.
+     * Only what runs out within [withinDays], plus whatever is overdue or soon (also by kilometres) anyway.
+     */
+    fun acrossCars(
+        cars: List<CarForReminders>,
+        today: LocalDate,
+        soonDays: Long = SOON_DAYS,
+        soonKm: Double = SOON_KM,
+        withinDays: Long = WIDGET_DAYS,
+    ): List<Pair<CarForReminders, Due>> =
+        cars.flatMap { car -> upcoming(car.events, today, car.odometerKm, soonDays, soonKm).map { car to it } }
+            .filter { (_, due) -> due.level != DueLevel.OK || (due.daysLeft != null && due.daysLeft <= withinDays) }
+            .sortedWith(
+                compareBy<Pair<CarForReminders, Due>> { it.second.level.ordinal }
+                    .thenBy { it.second.daysLeft ?: Long.MAX_VALUE }
+                    .thenBy { it.second.kmLeft ?: Double.MAX_VALUE }
+            )
 }
 
 /** What the person chose in the settings. */

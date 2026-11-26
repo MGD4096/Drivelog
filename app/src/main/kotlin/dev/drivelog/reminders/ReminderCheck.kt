@@ -12,6 +12,7 @@ import android.os.Build
 import dev.drivelog.AppSettings
 import dev.drivelog.Notifications
 import dev.drivelog.Prefs
+import dev.drivelog.ServicesWidget
 import dev.drivelog.Stores
 import dev.drivelog.Ui
 import dev.drivelog.backup.AutoBackup
@@ -28,23 +29,29 @@ object ReminderCheck {
     fun canNotify(context: Context): Boolean =
         Build.VERSION.SDK_INT < 33 || context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
+    /**
+     * Every vehicle in use (not archived) with its service log and its current odometer, as the reminders see them; the
+     * services widget ([dev.drivelog.ServicesWidget]) shows the same.
+     */
+    fun cars(context: Context): List<CarForReminders> {
+        val stores = Stores(context)
+        val trips = stores.trips?.list() ?: emptyList()
+        val details = stores.details
+        return Prefs.cars(context).filter { !details.get(it.address).archived }.map { car ->
+            val summary = VehicleSummary.of(car.address, trips, reading = stores.readings.get(car.address))
+            CarForReminders(car.address, car.name, stores.events.list(car.address), CarTexts.currentOdometerKm(car, summary, details.get(car.address)))
+        }
+    }
+
     /** Safe to call from any thread, at any time: each stage of each entry is announced once. */
     @Synchronized
     fun run(context: Context) {
         val app = context.applicationContext
+        ServicesWidget.update(app)                             // "days left" moves on every day, notifications or not
         val settings = AppSettings.reminders(app)
         if (!settings.enabled || !canNotify(app)) return      // nothing is marked as announced, so it is not lost
 
-        val stores = Stores(app)
-
-        val trips = stores.trips?.list() ?: emptyList()
-        val events = stores.events
-        val details = stores.details
-        val readings = stores.readings
-        val cars = Prefs.cars(app).filter { !details.get(it.address).archived }.map { car ->
-            val summary = VehicleSummary.of(car.address, trips, reading = readings.get(car.address))
-            CarForReminders(car.address, car.name, events.list(car.address), CarTexts.currentOdometerKm(car, summary, details.get(car.address)))
-        }
+        val cars = cars(app)
         val before = AppSettings.notified(app)
         val plan = ReminderPlanner.plan(cars, LocalDate.now(), before, settings)
 

@@ -49,7 +49,7 @@ protected by the plugin permission) is offered on the car's page, so the plugin 
   car values on the way.
 * **Trip summary:** distance, duration, moving time, average and top speed, odometer start/end, fuel start/end/used,
   refuelling during the trip, consumption in L/100 km, and the car's own average.
-* **Languages.** English and Polish (*Settings > Language*: phone language, English or Polski). All texts go through `tr("English text")` in `core/text/Lang.kt`; Polish is in `core/text/Polish.kt`, and a test fails when a text has no translation.
+* **Languages.** English and Polish (*Settings > Language*: phone language, English or Polski). All texts go through `tr("English text")` in `core/text/Lang.kt`; the texts are in the app's string resources (`res/values/strings.xml`, `res/values-pl/strings.xml`), and a test fails when a text has no translation.
 * **Dark theme.** *Settings > Theme*: follow the phone, light or dark. Colours come from `Colors.kt` by name, so every screen draws both themes (the map tiles are darkened with a colour filter too).
 * **Backup.** *Settings > Data* exports everything (trips, cars, photos, service log, settings) to one ZIP file and imports it again, for example on a new phone. Importing replaces the current data, and a file that is no backup is refused before anything is touched.
 * **Three tabs.** *Cars*, *Trips* and *Settings* (live status, permissions, reminder settings).

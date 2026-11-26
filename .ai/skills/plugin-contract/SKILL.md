@@ -64,7 +64,7 @@ binder as untrusted: check types and ranges, and never crash on a bad `Bundle`.
    two lists differ.
 4. `plugins/id6/Cds.kt`: the parsing into `CarValues`, with a test using real-looking raw values.
 5. Drivelog: `CarState`/`TripRecorder` if trips should keep it, `LastReading.merge` so the latest value is stored
-   apart from trips, the screens, and the texts via `tr()` + `Polish.kt`.
+   apart from trips, the screens, and the texts via `tr()` + the string resources.
 6. Decide what happens when the plugin does not send it (older plugin, other car): the screen hides it or falls back
    (e.g. the car's speed falls back to the phone's GPS).
 7. No personal data (GPS, contacts, VIN, addresses) without the maintainer's explicit decision.

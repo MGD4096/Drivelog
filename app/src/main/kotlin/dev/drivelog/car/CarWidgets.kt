@@ -205,7 +205,7 @@ class CarWidgets(
         val parts = known?.openParts
         if (parts != null) {
             val at = known.openPartsAtMs ?: known.atMs
-            val note = if (known.fromReading) tr("last read {0}", ui.dateTime(at)) else tr("at the end of the trip on {0}", ui.date(at))
+            val note = ui.date(at)                         // just the date: from a reading or from the end of a trip
             return DoorsStatus(OpenPartsText.describe(parts), parts.isEmpty(), note, parts)
         }
         return DoorsStatus("—", null, null)
@@ -214,7 +214,7 @@ class CarWidgets(
     fun currentOdometerKm(car: CarRef, s: VehicleSummary, d: CarDetails): Double? = CarTexts.currentOdometerKm(car, s, d)
 
     /** "32 L · range 410 km (live)", or from the end of the latest trip that had a reading. */
-    fun fuelText(car: CarRef, known: LastKnownCar?): String {
+    fun fuelText(car: CarRef, known: LastKnownCar?, withWhen: Boolean = true): String {
         fun format(c: CarSnapshot): String? {
             val parts = ArrayList<String>()
             c.fuelLiters?.let { parts += "${ui.f0(it)} L" }
@@ -226,15 +226,20 @@ class CarWidgets(
             format(AppState.car.snapshot())?.let { return tr("{0} (live)", it) }
         }
         if (known != null) format(known.snapshot)?.let {
-            return if (known.fromReading) tr("{0} (last read {1})", it, ui.dateTime(known.atMs))
-            else tr("{0} (at the end of the trip on {1})", it, ui.date(known.atMs))
+            if (!withWhen) return it                              // the car list: without when it was read
+            return tr("{0} ({1})", it, ui.date(known.atMs))
         }
         return "—"
     }
 
-    fun odometerText(car: CarRef, s: VehicleSummary, d: CarDetails): String {
+    /**
+     * The odometer and where it comes from: live, the latest reading, the end of the latest trip, or typed in.
+     * [withWhen] false (the car list): a reading without when it was made, one typed in with just the date.
+     */
+    fun odometerText(car: CarRef, s: VehicleSummary, d: CarDetails, withWhen: Boolean = true): String {
         if (!d.usesPlugin) {
             val km = s.manualOdometerNow(d) ?: return "—"
+            if (!withWhen) return d.manualOdometerAtMs?.let { tr("{0} km ({1})", ui.km(km), ui.date(it)) } ?: tr("{0} km", ui.km(km))
             return tr("{0} km", ui.km(km)) + (d.manualOdometerAtMs?.let { tr(" (entered on {0}, plus trips)", ui.date(it)) } ?: "")
         }
         val status = AppState.status
@@ -242,7 +247,7 @@ class CarWidgets(
             AppState.car.snapshot().odometerKm?.let { return tr("{0} km (live)", ui.km(it)) }
         }
         val km = s.odometerKm ?: return "—"
-        if (s.odometerFromReading) return tr("{0} km (last read {1})", ui.km(km), ui.dateTime(s.odometerAtMs ?: 0L))
-        return tr("{0} km (at the end of the trip on {1})", ui.km(km), ui.date(s.odometerAtMs ?: 0L))
+        if (!withWhen) return tr("{0} km", ui.km(km))
+        return tr("{0} km ({1})", ui.km(km), ui.date(s.odometerAtMs ?: 0L))   // just the date, from a reading or a trip
     }
 }

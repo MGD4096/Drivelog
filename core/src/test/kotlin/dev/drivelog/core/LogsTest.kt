@@ -181,3 +181,19 @@ class MonthlyStatsTest {
         assertNull(MonthlyStats.change(1.0, 0.0))
     }
 }
+
+class KmByKindTest {
+    @Test
+    fun businessAndPrivateOfOneMonth() {
+        val trips = listOf(
+            meta("a", ms("2026-11-03"), summary(120.0), TripLog(kind = TripKind.BUSINESS)),
+            meta("b", ms("2026-11-04"), summary(30.0), TripLog(kind = TripKind.PRIVATE)),
+            meta("c", ms("2026-11-05"), summary(10.0)),                                      // unmarked: private
+            meta("d", ms("2026-10-31"), summary(500.0), TripLog(kind = TripKind.BUSINESS)),  // another month
+        )
+        val km = MonthlyStats.kmByKind(trips, YearMonth.of(2026, 11), UTC)
+        assertEquals(120.0, km.getValue(TripKind.BUSINESS), 1e-9)
+        assertEquals(40.0, km.getValue(TripKind.PRIVATE), 1e-9)
+        assertEquals(0.0, MonthlyStats.kmByKind(emptyList(), YearMonth.of(2026, 11), UTC).getValue(TripKind.BUSINESS), 0.0)
+    }
+}

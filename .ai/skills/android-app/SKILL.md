@@ -12,14 +12,17 @@ stay thin: read input, call `core`, show the result.
 
 Files live in one package per feature folder (`main/`, `car/`, `recording/`, `trips/`, `map/`, `backup/`, `plugin/`,
 `reminders/`; AGENTS.md lists them); put a new file in the folder of the feature it belongs to. The root package keeps
-the shared pieces and the classes Android remembers by name: `App`, `MainActivity` (the launcher icon), `CarWidget`,
-`CarsWidget` and their pickers (placed widgets disappear when the provider's class name changes). Never move or rename those.
+the shared pieces and the classes Android remembers by name: `App` and `MainActivity` (the launcher icon). The
+home-screen widgets and their pickers live in the folder `widget/` but stay in package `dev.drivelog` (the one
+exception to "package = folder"): placed widgets disappear when a provider's class name changes. Never move them to
+another package or rename them; a new widget goes there too, in package `dev.drivelog`.
 Other components may move, with their `AndroidManifest.xml` entry; anything Android persisted for them (a scheduled
 job, a pending intent) must be replaced on the next start, as `ReminderScheduler.ensureScheduled` does.
 
 ## Project rules that apply here
 
-- **Texts:** every UI string through `tr()` / `trn()` with the Polish text in `core/text/Polish.kt`. The plugin app uses
+- **Texts:** every UI string through `tr()` / `trn()`, the texts in `res/values/strings.xml` and `values-pl/strings.xml`
+  (`t_…` / `p_…` keys, same English text as in the code; AGENTS.md, Rules). The plugin apps use
   string resources (`values/`, `values-pl/`) instead.
 - **Drivelog knows nothing about the car's make.** It only sees `CarValues`; head-unit details stay in `plugins/id6`.
 - **Security of plugins:** keep both checks in `CarPluginLink.kt` / `CarPluginRegistry`: the service must be protected

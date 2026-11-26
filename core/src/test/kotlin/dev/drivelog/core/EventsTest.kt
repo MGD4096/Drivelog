@@ -430,3 +430,45 @@ class RemainingFractionTest {
         assertEquals(0.0, Reminders.remainingFraction(due(e, LocalDate.of(2026, 2, 1), 25_000.0))!!, 1e-9)
     }
 }
+
+class UpcomingAcrossCarsTest {
+    private val today = LocalDate.of(2026, 11, 26)
+
+    @Test
+    fun mostPressingFirstOverAllCars() {
+        val car = CarForReminders("AA", "Car", listOf(
+            CarEvent("i", EventType.INSURANCE, LocalDate.of(2026, 1, 1), dueDate = LocalDate.of(2027, 1, 1)),        // 36 days: ok
+            CarEvent("t", EventType.INSPECTION, LocalDate.of(2025, 12, 1), dueDate = LocalDate.of(2026, 12, 1)),     // 5 days: soon
+        ), odometerKm = 100_000.0)
+        val bike = CarForReminders("BB", "Bike", listOf(
+            CarEvent("o", EventType.OIL_CHANGE, LocalDate.of(2026, 5, 1), odometerKm = 8_000.0, nextAtKm = 9_500.0),   // 167 km over
+            CarEvent("x", EventType.INSURANCE, LocalDate.of(2026, 3, 1), dueDate = LocalDate.of(2027, 1, 20)),       // 55 days: ok
+            CarEvent("r", EventType.REPAIR, LocalDate.of(2026, 6, 1), title = "Chain"),                             // no due: left out
+        ), odometerKm = 9_667.0)
+        val list = Reminders.acrossCars(listOf(car, bike), today)
+        assertEquals(listOf("o", "t", "i", "x"), list.map { it.second.event.id })
+        // only about two months ahead: the bike's insurance in 115 days is left out, the overdue oil stays
+        val later = CarForReminders("BB", "Bike", bike.events.map { if (it.id == "x") it.copy(dueDate = LocalDate.of(2027, 3, 21)) else it }, 9_667.0)
+        assertEquals(listOf("o", "t", "i"), Reminders.acrossCars(listOf(car, later), today).map { it.second.event.id })
+        assertEquals(listOf("Bike", "Car", "Car", "Bike"), list.map { it.first.name })
+        assertEquals(DueLevel.OVERDUE, list.first().second.level)
+        assertTrue(Reminders.acrossCars(emptyList(), today).isEmpty())
+    }
+}
+
+class OverdueUntilRenewedTest {
+    private val today = LocalDate.of(2026, 11, 26)
+    private val expired = CarEvent("old", EventType.INSURANCE, LocalDate.of(2025, 11, 1), dueDate = LocalDate.of(2026, 11, 1))
+
+    @Test
+    fun anOverdueEntryShowsUntilANewOneOfTheSameKindIsLogged() {
+        fun ids(events: List<CarEvent>) = Reminders.acrossCars(listOf(CarForReminders("AA", "Car", events, null)), today).map { it.second.event.id }
+        assertEquals(listOf("old"), ids(listOf(expired)))                                                     // overdue: shown
+        val renewed = CarEvent("new", EventType.INSURANCE, LocalDate.of(2026, 11, 20), dueDate = LocalDate.of(2027, 11, 20))
+        assertEquals(emptyList<String>(), ids(listOf(expired, renewed)))                                      // renewed, a year ahead: gone
+        val noDate = CarEvent("new", EventType.INSURANCE, LocalDate.of(2026, 11, 20))
+        assertEquals(emptyList<String>(), ids(listOf(expired, noDate)))                                       // renewed without a date: gone too
+        val oil = CarEvent("oil", EventType.OIL_CHANGE, LocalDate.of(2026, 11, 20), dueDate = LocalDate.of(2027, 11, 20))
+        assertEquals(listOf("old"), ids(listOf(expired, oil)))                                                // another kind renews nothing
+    }
+}

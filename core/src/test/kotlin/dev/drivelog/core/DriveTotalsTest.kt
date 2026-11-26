@@ -4,11 +4,15 @@ import dev.drivelog.carapi.CarValues
 import dev.drivelog.core.car.CarState
 import dev.drivelog.core.car.DriveTotals
 import dev.drivelog.core.trip.CounterFuel
+import dev.drivelog.core.trip.FileTripStore
 import dev.drivelog.core.trip.TrackPoint
 import dev.drivelog.core.trip.Trip
+import dev.drivelog.core.trip.TripJson
 import dev.drivelog.core.trip.TripMeta
 import dev.drivelog.core.trip.TripStats
 import dev.drivelog.core.trip.TripSummary
+import java.io.File
+import java.nio.file.Files
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -51,20 +55,48 @@ class DriveTotalsTest {
         samples = emptyList(), startCar = CarValues.EMPTY, endCar = endCar, carTotals = totals,
     )
 
+    /** The plugin delivers the car's speed only now and then: with a GPS track, GPS gives the speeds. */
     @Test
-    fun theCarsSpeedWinsOverGpsWhenItIsThere() {
-        val s = TripStats.summarize(trip(DriveTotals(maxSpeedKmh = 95.0, movingMs = 240_000, counterFuelL = 0.4), CarValues(avgSpeedKmh = 44.0)))
+    fun gpsGivesTheSpeedsWheneverThereIsATrack() {
+        val s = TripStats.summarize(trip(DriveTotals(maxSpeedKmh = 24.0, movingMs = 28_000, counterFuelL = 0.4), CarValues(avgSpeedKmh = 44.0)))
+        assertFalse(s.speedFromCar)
+        assertEquals(36.0, s.maxSpeedKmh!!, 1e-9)                       // the fixes' own 10 m/s, not the car's 24
+        assertEquals(300_000L, s.movingTimeMs)                          // the 5 minutes between the fixes, not 28 s
+        assertEquals(s.gpsDistanceKm / (300_000 / 3_600_000.0), s.avgMovingSpeedKmh!!, 1e-9)
+        assertEquals(0.4, s.counterFuelL!!, 1e-9)                       // the fuel counter and the car's average stay
+        assertEquals(44.0, s.carAvgSpeedKmh!!, 1e-9)
+        assertNull(TripStats.summarize(trip(DriveTotals.NONE)).counterFuelL)
+    }
+
+    /** Without a track (no location permission, no fix) the car's speed is all there is. */
+    @Test
+    fun withoutATrackTheCarsSpeedIsUsedIfItsAverageCanBeTrue() {
+        fun noTrack(totals: DriveTotals) = TripStats.summarize(trip(totals).copy(points = emptyList(), endCar = CarValues(odometerKm = 1010.0), startCar = CarValues(odometerKm = 1000.0)))
+        val s = noTrack(DriveTotals(maxSpeedKmh = 95.0, movingMs = 600_000))
         assertTrue(s.speedFromCar)
         assertEquals(95.0, s.maxSpeedKmh!!, 1e-9)
-        assertEquals(240_000L, s.movingTimeMs)
-        assertEquals(s.distanceKm / (240_000 / 3_600_000.0), s.avgMovingSpeedKmh!!, 1e-9)
-        assertEquals(0.4, s.counterFuelL!!, 1e-9)
-        assertEquals(44.0, s.carAvgSpeedKmh!!, 1e-9)
+        assertEquals(600_000L, s.movingTimeMs)
+        assertEquals(60.0, s.avgMovingSpeedKmh!!, 1e-9)                 // 10 km by the odometer in 10 minutes
+        assertNull("an average above the top speed is not shown", noTrack(DriveTotals(maxSpeedKmh = 24.0, movingMs = 28_000)).avgMovingSpeedKmh)
+    }
 
-        val gps = TripStats.summarize(trip(DriveTotals.NONE))
-        assertFalse(gps.speedFromCar)
-        assertEquals(36.0, gps.maxSpeedKmh!!, 1e-9)                // the fixes' own 10 m/s
-        assertNull(gps.counterFuelL)
+    @Test
+    fun aSavedSummaryFromAnOlderVersionIsWorkedOutAgainOnce() {
+        val dir = Files.createTempDirectory("trips").toFile()
+        try {
+            val store = FileTripStore(dir)
+            store.save(trip(DriveTotals(maxSpeedKmh = 24.0, movingMs = 28_000)))
+            // the meta file as the old version wrote it: no "sv", the car's 28 s as the moving time
+            val saved = store.list().single()
+            val old = TripJson.metaToJson(saved.copy(summary = saved.summary.copy(movingTimeMs = 28_000))).replace(Regex("\"sv\":\\s*\\d+(\\.0)?,"), "")
+            val file = File(dir, "t.meta.json")
+            file.writeText(old)
+            assertEquals(1, TripJson.summaryVersion(file.readText()))
+            assertEquals(300_000L, store.list().single().summary.movingTimeMs)
+            assertEquals(TripJson.SUMMARY_VERSION, TripJson.summaryVersion(file.readText()))   // saved: not again
+        } finally {
+            dir.deleteRecursively()
+        }
     }
 
     @Test

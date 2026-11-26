@@ -22,8 +22,10 @@ kotlinx.serialization, Moshi, Mockito, AssertJ...).
 ## Project rules that apply here
 
 - No car maker's name in identifiers, packages, comments or texts. Car-specific formats stay in `plugins/id6/Cds.kt`.
-- Every UI string is `tr("English text")` / `trn(...)`, and its Polish text goes into `core/text/Polish.kt`. Keep `{0}`
-  placeholders in both. `LangTest` fails otherwise. A string with `\n` is a different key from one without.
+- Every UI string is `tr("English text")` / `trn(...)`; the texts are in `app/src/main/res/values/strings.xml` (English)
+  and `values-pl/strings.xml` (Polish) under the same `t_…` / `p_…` key (AGENTS.md, Rules). Keep `{0}`
+  placeholders in both. `LangTest` fails otherwise. A string with `\n` is a different text from one without. `core`
+  never reads resources: it gets the texts through `Lang.texts` (the app: `ResourceTexts`; tests: `XmlTexts`).
 - Renames keep old data readable (e.g. `Backup.OLD_FORMAT`). A stored JSON field that is renamed or removed still
   has to be read; new fields are optional with a default.
 - `CarPart` in `core/car/OpenParts.kt` lists exactly `CarValues.PART_LABELS` (`CarStateTest`).

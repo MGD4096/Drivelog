@@ -8,4 +8,6 @@
     <!-- a low battery, something open, a tyre warning -->
     <color name="widget_alert">#C62828</color>
     <color name="widget_tile">#0F000000</color>
+    <!-- something about to run out (the services widget) -->
+    <color name="widget_warn">#E65100</color>
 </resources>

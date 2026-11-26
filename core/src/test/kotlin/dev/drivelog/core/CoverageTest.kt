@@ -7,7 +7,7 @@ import dev.drivelog.core.car.OpenPartsText
 import dev.drivelog.core.car.VehicleSummary
 import dev.drivelog.core.car.Vin
 import dev.drivelog.core.text.Lang
-import dev.drivelog.core.text.Polish
+import dev.drivelog.core.text.Texts
 import dev.drivelog.core.text.tr
 import dev.drivelog.core.trip.TripJson
 import dev.drivelog.core.trip.TripMeta
@@ -157,38 +157,43 @@ class VinAndPartsTest {
     @Test
     fun partLabelsAreTranslated() {
         Lang.code = "pl"
-        assertEquals(tr("sunroof") + tr(" (tilted)"), OpenPartsText.describeLabel("sunroof (tilted)"))
-        assertEquals(tr("Closed"), OpenPartsText.describe(emptyList()))
-        assertTrue(OpenPartsText.describe(listOf("bonnet")).startsWith(tr("Open: {0}", "").substringBefore("{")))
+        Lang.texts = XmlTexts.polish()
+        try {
+            assertEquals("szyberdach (uchylone)", OpenPartsText.describeLabel("sunroof (tilted)"))
+            assertEquals(tr("Closed"), OpenPartsText.describe(emptyList()))
+            assertTrue(OpenPartsText.describe(listOf("bonnet")).startsWith(tr("Open: {0}", "").substringBefore("{")))
+        } finally {
+            Lang.code = "en"
+            Lang.texts = Texts.ENGLISH
+        }
     }
 }
 
 class PluralAndLanguageTest {
     private val language = Lang.code
-    @After fun restore() { Lang.code = language }
+    private val texts = Lang.texts
+    @After fun restore() { Lang.code = language; Lang.texts = texts }
 
+    /** The Polish plural categories the test texts use, as Android has them. */
     @Test
-    fun polishPluralForms() {
-        val one = listOf(1L)
-        val few = listOf(2L, 3L, 4L, 22L, 23L, 24L, 102L, 134L)
-        val many = listOf(0L, 5L, 11L, 12L, 13L, 14L, 15L, 21L, 25L, 111L, 112L, 113L, 114L, 1000L)
-        one.forEach { assertEquals("$it", 0, Lang.pluralForm(it)) }
-        few.forEach { assertEquals("$it", 1, Lang.pluralForm(it)) }
-        many.forEach { assertEquals("$it", 2, Lang.pluralForm(it)) }
+    fun polishPluralCategories() {
+        listOf(1L).forEach { assertEquals("$it", "one", XmlTexts.polishCategory(it)) }
+        listOf(2L, 3L, 4L, 22L, 23L, 24L, 102L, 134L).forEach { assertEquals("$it", "few", XmlTexts.polishCategory(it)) }
+        listOf(0L, 5L, 11L, 12L, 13L, 14L, 15L, 21L, 25L, 111L, 112L, 113L, 114L, 1000L).forEach { assertEquals("$it", "many", XmlTexts.polishCategory(it)) }
     }
 
     @Test
     fun englishPluralsAndPolishPluralsUseTheirOwnForms() {
         Lang.code = "en"
+        Lang.texts = Texts.ENGLISH
         assertEquals("1 trip", Lang.trn(1, "{0} trip", "{0} trips"))
         assertEquals("2 trips", Lang.trn(2, "{0} trip", "{0} trips"))
         assertEquals("0 trips", Lang.trn(0, "{0} trip", "{0} trips"))
         Lang.code = "pl"
-        val forms = Polish.plurals["{0} trips"]!!.split("|")
-        assertEquals(3, forms.size)
-        assertEquals(forms[0].replace("{0}", "1"), Lang.trn(1, "{0} trip", "{0} trips"))
-        assertEquals(forms[1].replace("{0}", "3"), Lang.trn(3, "{0} trip", "{0} trips"))
-        assertEquals(forms[2].replace("{0}", "12"), Lang.trn(12, "{0} trip", "{0} trips"))
+        Lang.texts = XmlTexts.polish()
+        assertEquals("1 przejazd", Lang.trn(1, "{0} trip", "{0} trips"))
+        assertEquals("3 przejazdy", Lang.trn(3, "{0} trip", "{0} trips"))
+        assertEquals("12 przejazdów", Lang.trn(12, "{0} trip", "{0} trips"))
         assertEquals("a text without a translation falls back to English", "1 widget", Lang.trn(1, "{0} widget", "{0} widgets"))
         assertEquals("5 widgets", Lang.trn(5, "{0} widget", "{0} widgets"))
     }

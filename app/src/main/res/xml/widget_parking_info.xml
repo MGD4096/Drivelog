@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Where a vehicle is parked (ParkingWidget). Redrawn by the app after every trip; the period only moves the time on. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
+    android:minHeight="140dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:minResizeWidth="140dp"
+    android:minResizeHeight="90dp"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="10800000"
+    android:configure="dev.drivelog.WidgetCarActivity"
+    android:widgetFeatures="reconfigurable"
+    android:initialLayout="@layout/widget_parking"
+    android:previewLayout="@layout/widget_parking"
+    android:description="@string/widget_parking_description"
+    android:widgetCategory="home_screen" />

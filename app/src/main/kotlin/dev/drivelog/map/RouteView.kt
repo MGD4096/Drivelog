@@ -73,20 +73,22 @@ object RouteLoader {
     fun forget(context: Context, id: String) = cache(context).remove(id)
 
     /** Calls [show] on the main thread; not at all when the trip has no track or the screen is gone. */
+    /** The route of trip [id], from the cache or worked out from the trip (then kept). Blocking: off the main thread. */
+    fun shape(context: Context, store: TripLoader?, id: String): List<LatLon>? {
+        val c = cache(context)
+        c.get(id)?.let { return it.takeIf { s -> s.size >= 2 } }
+        val trip = store?.load(id) ?: return null
+        val shape = RouteShape.simplify(trip.points)
+        if (shape.size < 2) return null
+        c.put(id, shape)
+        return shape
+    }
+
     fun load(activity: Activity, store: TripLoader?, id: String, io: ExecutorService, show: (List<LatLon>) -> Unit) {
-        val c = cache(activity)
         try {
             io.execute {
-                var shape = c.get(id)
-                if (shape == null) {
-                    val trip = store?.load(id)
-                    if (trip != null) {
-                        shape = RouteShape.simplify(trip.points)
-                        if (shape.size >= 2) c.put(id, shape)
-                    }
-                }
-                val result = shape
-                if (result != null && result.size >= 2) {
+                val result = shape(activity, store, id)
+                if (result != null) {
                     activity.runOnUiThread { if (!activity.isDestroyed) show(result) }
                 }
             }

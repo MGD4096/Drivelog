@@ -71,7 +71,7 @@ data class TripSummary(
     val counterFuelL: Double? = null,
     /** The trip computer's average speed at the end of the trip. */
     val carAvgSpeedKmh: Double? = null,
-    /** [maxSpeedKmh] and [movingTimeMs] come from the car's speed rather than from GPS. */
+    /** [maxSpeedKmh] and [movingTimeMs] come from the car's speed: only for a trip without a GPS track (see [TripStats]). */
     val speedFromCar: Boolean = false,
 )
 
@@ -80,6 +80,8 @@ object TripStats {
     const val MAX_PLAUSIBLE_SPEED_MPS = 85.0
     /** Segments slower than this are GPS drift while standing still. */
     const val MOVING_MIN_SPEED_MPS = 0.5
+    /** The average over the moving time may lie this much above the top speed (rounding, a missed peak); more is a broken moving time. */
+    const val MOVING_AVERAGE_SLACK = 1.1
     /** A rise in tank level of at least this many litres between two readings is a refuelling, not fuel sloshing. */
     const val REFUEL_MIN_LITERS = 5.0
     const val MIN_KM_FOR_CONSUMPTION = 5.0
@@ -145,12 +147,19 @@ object TripStats {
             fuelUsed / distanceKm * 100.0
         } else null
 
-        // The car's own speed, when the plugin sends it, does not lose tunnels and garages; GPS is the fallback
+        // GPS first. The plugin delivers the car's speed only now and then (on a change, sometimes many seconds apart),
+        // so the car's top speed and moving time miss parts of the drive (seen: 28 s of a 6-minute trip, 208 km/h on
+        // average). The car's figures are used only for a trip without a GPS track (no location permission, no fix),
+        // and then only an average that does not lie above the top speed.
         val car = trip.carTotals
-        val speedFromCar = car.maxSpeedKmh != null && car.movingMs > 0
+        val carMax = car.maxSpeedKmh
+        val speedFromCar = movingMs == 0L && carMax != null && car.movingMs > 0
         val moving = if (speedFromCar) car.movingMs else movingMs
-        val movingKmh = if (speedFromCar) distanceKm / (moving / 3_600_000.0)
-            else if (movingMs > 0) gpsKm / (movingMs / 3_600_000.0) else null
+        val movingKmh = when {
+            speedFromCar -> (distanceKm / (car.movingMs / 3_600_000.0)).takeIf { carMax != null && it <= carMax * MOVING_AVERAGE_SLACK + 1.0 }
+            movingMs > 0 -> gpsKm / (movingMs / 3_600_000.0)
+            else -> null
+        }
 
         return TripSummary(
             durationMs = max(0L, trip.endMs - trip.startMs),

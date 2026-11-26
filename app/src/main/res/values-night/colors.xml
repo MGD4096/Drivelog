@@ -5,4 +5,5 @@
     <color name="widget_muted">#9AA0A6</color>
     <color name="widget_alert">#EF9A9A</color>
     <color name="widget_tile">#1AFFFFFF</color>
+    <color name="widget_warn">#FFB74D</color>
 </resources>
