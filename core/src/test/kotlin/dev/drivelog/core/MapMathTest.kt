@@ -1,15 +1,22 @@
 package dev.drivelog.core
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import dev.drivelog.core.map.GeoBounds
+import dev.drivelog.core.map.MapCamera
+import dev.drivelog.core.map.Mercator
+import dev.drivelog.core.map.SpeedColors
+import dev.drivelog.core.map.TileRef
+import dev.drivelog.core.map.TrackSegments
+import dev.drivelog.core.trip.TrackPoint
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.asinh
 import kotlin.math.floor
 import kotlin.math.tan
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
 class MercatorTest {
 

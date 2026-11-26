@@ -1,6 +1,8 @@
 package dev.drivelog.core
 
 import dev.drivelog.carapi.CarValues
+import dev.drivelog.core.car.CarPart
+import dev.drivelog.core.car.CarState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

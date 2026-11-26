@@ -1,10 +1,17 @@
 package dev.drivelog.core
 
+import dev.drivelog.core.car.CarPart
+import dev.drivelog.core.car.EventType
+import dev.drivelog.core.text.Lang
+import dev.drivelog.core.text.Polish
+import dev.drivelog.core.text.tr
+import dev.drivelog.core.text.trn
+import dev.drivelog.core.trip.TripKind
+import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class LangTest {
     @After
@@ -13,14 +20,14 @@ class LangTest {
     @Test
     fun englishIsReturnedAsItIsWithTheArgumentsFilledIn() {
         Lang.code = "en"
-        assertEquals("Spent in 2026: 1 200 zł", tr("Spent in {0}: {1}", 2026, "1 200 zł"))
+        assertEquals("Driver: Jan", tr("Driver: {0}", "Jan"))
         assertEquals("Anything at all", tr("Anything at all"))
     }
 
     @Test
     fun polishIsUsedWhenChosenAndUnknownTextsStayEnglish() {
         Lang.code = "pl"
-        assertEquals("Spent in 2026: x".replace("Spent in", "Wydano w"), tr("Spent in {0}: {1}", 2026, "x"))
+        assertEquals("Wydano w 2026", tr("Spent in {0}", 2026))
         assertEquals("Text nobody translated", tr("Text nobody translated"))
     }
 
@@ -76,6 +83,31 @@ class LangTest {
             }
         }
         assertTrue("Not translated:\n" + missing.joinToString("\n"), missing.isEmpty())
+    }
+
+    /** No translation is kept for a text the code no longer uses (they pile up when texts change). */
+    @Test
+    fun everyTranslationIsStillUsed() {
+        val root = listOf(File("."), File("..")).firstOrNull { File(it, "app/src/main/kotlin").isDirectory } ?: return
+        val literal = "\"((?:[^\"\\\\]|\\\\.)*)\""
+        val single = Regex("(?<![A-Za-z_.])tr\\($literal")
+        val plural = Regex("(?<![A-Za-z_.])trn\\([^,]+,\\s*$literal,\\s*$literal")
+        val used = HashSet<String>()
+        val usedPlurals = HashSet<String>()
+        for (dir in listOf("app/src/main/kotlin", "core/src/main/kotlin")) {
+            File(root, dir).walkTopDown().filter { it.isFile && it.extension == "kt" && it.name != "Lang.kt" && it.name != "Polish.kt" }.forEach { file ->
+                val text = file.readText()
+                for (m in single.findAll(text)) used += unescape(m.groupValues[1])
+                for (m in plural.findAll(text)) usedPlurals += unescape(m.groupValues[2])
+            }
+        }
+        // looked up by variable: the names of event types, trip kinds and car parts
+        used += EventType.values().map { englishOf(it) }
+        Lang.code = "en"
+        used += TripKind.values().map { it.label }
+        used += CarPart.values().map { it.label }
+        val unused = Polish.words.keys.filter { it !in used } + Polish.plurals.keys.filter { it !in usedPlurals }.map { "plural $it" }
+        assertTrue("Translations nothing uses (remove them from Polish.kt):\n" + unused.joinToString("\n"), unused.isEmpty())
     }
 
     /** Texts that are looked up by variable, not written out where they are used, so the scan above cannot see them. */

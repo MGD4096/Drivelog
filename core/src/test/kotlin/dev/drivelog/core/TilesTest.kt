@@ -1,6 +1,16 @@
 package dev.drivelog.core
 
 import com.sun.net.httpserver.HttpServer
+import dev.drivelog.core.map.DiskTileCache
+import dev.drivelog.core.map.TileFetcher
+import dev.drivelog.core.map.TileProvider
+import dev.drivelog.core.map.TileSource
+import java.io.File
+import java.net.InetSocketAddress
+import java.nio.file.Files
+import java.util.Base64
+import java.util.Collections
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -10,12 +20,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.File
-import java.net.InetSocketAddress
-import java.nio.file.Files
-import java.util.Base64
-import java.util.Collections
-import java.util.concurrent.atomic.AtomicInteger
 
 /** A 1 x 1 pixel PNG. */
 private val PNG: ByteArray = Base64.getDecoder().decode(

@@ -269,7 +269,7 @@ static void testPlugin(const char* libPath, const std::string& dataDir) {
     if (fd < 0) return;
     Reader r(fd);
     std::string hello = r.data(3000);
-    CHECK(contains(hello, "{\"type\":\"hello\",\"proto\":1,\"app\":\"drivelog-bridge-0.1.0 EntryNav2\""));
+    CHECK(contains(hello, "{\"type\":\"hello\",\"proto\":1,\"app\":\"drivelog-bridge-0.2.0 EntryNav2\""));
     CHECK(contains(hello, "\"props\":18}"));
     std::string snap = r.data(3000);
     CHECK(contains(snap, "{\"type\":\"snapshot\",") && contains(snap, "\"values\":{\"driving.odometer\":{\"odometer\":12345}}}"));

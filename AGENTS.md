@@ -11,10 +11,11 @@ an iDrive plugin that runs inside the head unit. The maintainer writes in Polish
 |---|---|---|
 | `car-api/` | `CarValues` (the neutral car values, `checked()` ranges, `PART_LABELS`) and `Json` (tiny reader/writer) | Kotlin/JVM |
 | `plugin-api/` | the Drivelog ↔ plugin contract: AIDL `ICarPlugin` / `ICarDataSink`, `CarPluginContract` (actions, meta-data keys, states, `API_VERSION`), `CarValuesBundle`, the `signature` permission in its manifest | Android library |
-| `core/` | Drivelog's logic: trips, recorder, statistics, storage, backup, GPX/CSV, reminders, map maths, weather, mileage log (`MileageLog.kt`), fuel log (`FuelLog.kt`), monthly statistics, latest car values (`LastReading.kt`), texts (`Lang.kt`, `Polish.kt`) | Kotlin/JVM |
-| `app/` | Drivelog (`dev.drivelog`): `TripService`, Bluetooth, screens, `CarPluginLink.kt` (finds plugins, checks signature, binds), `StatsActivity`, `FuelPanel`, `MileageExport` (PDF/CSV), `CarWidget` (home screen) | Android app |
-| `plugins/id6/` | Drivelog ID6 (`dev.drivelog.id6`): `Cds.kt` (BMW CDS formats → `CarValues`), `Bridge.kt` (TCP client of the head-unit plugin), `CarWifi.kt`, `Id6PluginService.kt`, `InfoActivity` (no launcher icon) | Android app |
-| `headunit/` | DrivelogBridge: iDrive PluginApp in C++98 for NBT Evo (QNX 6.5) and EntryNav2 (Linux ARMv7hf); serves 18 CDS values on TCP 7777 as JSON lines | C++ |
+| `core/` | Drivelog's logic (`dev.drivelog.core.*`), one package per folder: `trip/` (trips, recorder, `TripStorage`, mileage log `MileageLog`, monthly statistics, GPX/CSV `Export`, `LiveSpeed`), `car/` (`CarData`/`CarState`, `CarDetails` with `VehicleKind` car or motorcycle, `VehicleSummary`, `OpenParts`, `ManualOdometer`, `CarInput`, `CarHealth`, latest values `LastReading`, fuel log `FuelLog`, service log and reminders `Events`, `WidgetChoice`, `Silhouette`), `map/` (map maths, route shape, tiles, weather), `storage/` (store interfaces `Stores.kt`: `TripStore`, `CarDetailsStore`... implemented by the `File...Store` classes; `AtomicFile`, `Backup`, automatic backup rules `BackupRotation`), `text/` (`Lang.kt`, `Polish.kt`) | Kotlin/JVM |
+| `app/` | Drivelog (`dev.drivelog`), one package per folder. The root keeps what all screens share (`Stores.kt`: every data store and its file, build stores only through it; `AppState`, `AppSettings`, `Ui`, `Colors`, `Notifications`) and the classes Android remembers by name (`App`, `MainActivity` = launcher icon, `CarWidget` + `WidgetCarActivity`, `CarsWidget` (several vehicles) + `WidgetCarsActivity` = placed widgets): **do not move or rename these**. `main/` (the tabs: `TripsTab`, `CarsScreen`, `SettingsTab`, `PermissionsPanel`, `TripStarter`), `car/` (`CarActivity` with `CarPageViews`, `CarPhotos`, `CarInfoDialog`, `CarEditor`, `CarRecordActions`, `ServiceLogPanel`, `FuelPanel`, photos, `CarTripsActivity`), `recording/` (`TripService` with `TripLocation`, `CarConnectionWatch`, `TripPlugin`, `CarRecordKeeper`, `TripDrafts`; the Bluetooth receiver, `PhoneLocation`), `trips/` (`TripActions`, `TripLogEditor`, `TripShare`, `SharedFiles`, `MileageExport` PDF/CSV, `ExportProvider`, `StatsActivity`), `map/` (map view, tiles, places, `WeatherTile`), `backup/` (`BackupFlow`, `AutoBackup` weekly into a chosen folder), `plugin/` (`CarPluginLink.kt`: finds plugins, checks signature, binds), `reminders/` | Android app |
+| `plugins/id6/` | Drivelog ID6 (`dev.drivelog.id6`): `Cds.kt` (BMW CDS formats → `CarValues`), `Bridge.kt` (TCP client of the head-unit plugin), `BridgeVersion.kt` (warns about an older head-unit plugin), `HeadUnitRoutes.kt` (the ways to reach the head unit, tried in turn: `WifiRoute`, `CallsRoute`; `PluginStatus`), `CarWifi.kt`, `Id6PluginService.kt`, `InfoActivity` (no launcher icon) | Android app |
+| `plugins/ride/` | Drivelog Ride (`dev.drivelog.ride`), for a motorcycle: reads its values from the maker's phone app, which gets them from the motorcycle when it disconnects. `ScreenReaderService` (an accessibility service limited to that app in `res/xml/screen_reader.xml`; after a ride, at the next unlock, it opens the app, taps only the vehicle's picture for the details, reads and goes home; never types), `RideScreen.kt` (the screens' views by id → `CarValues`; `UpdatedAgo` reads "Updated: 2 weeks ago"), `RideStore`, `RidePluginService` (during a ride: the last reading = the start values), `InfoActivity` (tank size: the app shows fuel in %). After the ride the values go to Drivelog as `CarPluginContract.ACTION_READING` (`PluginReadingReceiver`, `core/trip/LateReading.kt`: the newest trip's end values when they fit) | Android app |
+| `headunit/` | DrivelogBridge: iDrive PluginApp in C++98 for NBT Evo (QNX 6.5) and EntryNav2 (Linux ARMv7hf); serves 18 CDS values on TCP 7777 as JSON lines. One translation unit: `drivelog_bridge.cpp` (CDS callbacks, screen, app object) includes the parts in `src/bridge_*.hpp` (core logic, framework, platform, log, crash guard, values, clients, listener, caller, network) | C++ |
 
 Data path: car CDS → `headunit/` (TCP, JSON lines; the head unit calls the phone on 7778, or the phone calls 7777) → `plugins/id6` (BMW formats → `CarValues`, sent as a
 `Bundle` over AIDL at most once a second, on change) → Drivelog `CarState` → trip recorder / screens.
@@ -30,8 +31,8 @@ Environment: Windows, PowerShell, Git Bash, Docker Desktop. No Python, g++ or Ja
 - **JDK 21, not 25:** Kotlin 1.9.25 crashes on Android Studio's JBR 25 (`IllegalArgumentException: 25.0.4`).
   `$env:JAVA_HOME = "$env:USERPROFILE\.jdks\jbr-21.0.11"` before `gradlew.bat`.
 - All unit tests (always before finishing a Kotlin change):
-  `.\gradlew.bat :car-api:test :core:test :plugins:id6:testDebugUnitTest`
-- Both APKs: `.\gradlew.bat :app:assembleDebug :plugins:id6:assembleDebug`
+  `.\gradlew.bat :car-api:test :core:test :plugins:id6:testDebugUnitTest :plugins:ride:testDebugUnitTest`
+- The three APKs: `.\gradlew.bat :app:assembleDebug :plugins:id6:assembleDebug :plugins:ride:assembleDebug`
 - Head-unit plugin, built for ARM and run under qemu against a fake framework (always after a `headunit/` change):
   `bash headunit/toolchain/check.sh` (Git Bash; uses the Docker images `gauge-entrynav2-tc` / `entrynav2-runner`,
   or `drivelog-*` built from `headunit/toolchain/`).
@@ -39,6 +40,11 @@ Environment: Windows, PowerShell, Git Bash, Docker Desktop. No Python, g++ or Ja
   `headunit/lib/entrynav2/`). NBT Evo: `headunit\build_nbt.bat dist` (needs QNX SDP 6.5; not available on this PC)
   → `headunit\dist\drivelog-bridge-nbt\` (USB stick contents) and `.tar`; `build_nbt.bat pack` only packs an
   existing `build\nbt\libDrivelogBridge.so` (`toolchain\pack_nbt.ps1`, Windows' PowerShell and tar).
+- Versions: both apps take theirs from the number of commits (`build.gradle`, `1.0.<n>`). The head-unit plugin's is
+  `BRIDGE_VERSION` in `headunit/src/bridge_platform.hpp`: raise it with every change the phone needs, together with
+  `BridgeVersion.MIN` in `plugins/id6` (the plugin then tells the user to update the head unit).
+- CI (`.github/workflows/android.yml`): unit tests and APKs (JDK 21), the head-unit host test in Docker, line endings.
+- Manual tests on a phone and in the car: `docs/manual-tests.md` (go through the parts a change touches).
 - Line endings are fixed in `.gitattributes` (`*.sh`, `*.py`, `Makefile` LF; `*.bat`, `*.ps1` CRLF): a CR in a script
   that runs on the head unit or in Docker breaks it.
 - Text/image database of the head-unit plugin (after editing `headunit/make_db.py`):
@@ -51,20 +57,20 @@ Environment: Windows, PowerShell, Git Bash, Docker Desktop. No Python, g++ or Ja
 - **No car maker's name in the code** (identifiers, packages, module names, UI texts, comments): packages are
   `dev.drivelog.*`, the plugin is `plugins/id6` / `dev.drivelog.id6` / "Drivelog ID6", plugin id `"id6"`. The one
   exception is the C++ `namespace bmw` / `bmw::` symbols in `headunit/`: they must match the framework's exported
-  (mangled) names. The READMEs may name the cars the plugin works with.
+  (mangled) names. The other: the motorcycle app's package name in `plugins/ride`'s `res/xml/screen_reader.xml` and manifest `<queries>` (Android needs it to show the screen reader that one app and to open it; the code takes it from the service's info). The READMEs may name the cars the plugin works with.
 - **Renames keep old data readable:** backups named `idrive-trips-backup` (before the rename) are still imported
   (`Backup.OLD_FORMAT`).
 - **Changing the contract** (`car-api`, `plugin-api`): new optional `CarValues` fields / `Bundle` keys / states are
   fine without a version bump (unknown keys are ignored). Raise `CarPluginContract.API_VERSION` only for changes the
   other side cannot ignore, and update both apps. Open parts must be labels of `CarValues.PART_LABELS`; `CarPart`
-  in `core/Vehicle.kt` must list exactly the same (`CarStateTest` checks it).
+  in `core/car/OpenParts.kt` must list exactly the same (`CarStateTest` checks it).
 - **New CDS property:** add it to `kProperties` in `headunit/src/bridge_core.hpp` *and* `CdsProperty` in
   `plugins/id6/Cds.kt` (`PluginSourceTest` fails when they differ), add a stub to `kStubs` in
   `drivelog_bridge.cpp` (one per property; a compile-time check counts them), the parsing in `CdsParser`, and the
   host test's expectations (`props`, value counts, screen texts in `make_db.py`). No personal data (GPS, contacts, VIN, addresses)
   without the maintainer's explicit decision.
 - **Texts in Drivelog:** every UI string goes through `tr("English text")` / `trn(...)`; add the Polish one to
-  `core/Polish.kt` (`LangTest` fails on a missing translation or a lost `{0}` placeholder). The plugin app uses Android
+  `core/text/Polish.kt` (`LangTest` fails on a missing translation or a lost `{0}` placeholder). The plugin app uses Android
   string resources (`values/`, `values-pl/`).
 - **No libraries** beyond the Android framework and JUnit. Logic that can be plain Kotlin goes into a JVM module with
   unit tests; Android classes stay thin.
@@ -83,9 +89,15 @@ Environment: Windows, PowerShell, Git Bash, Docker Desktop. No Python, g++ or Ja
 
 ## Gotchas
 
+- **Drivelog Ride depends on the motorcycle app's view ids** (`fuel_level`, `remaining_range`, `total_mileage_tile`,
+  `current_tire_pressure_*_tile`, `toolbar_subtitle`; see `plugins/ride/src/test/resources/`, real dumps). An update
+  of that app can rename them: then take a new `uiautomator dump` of both screens (main, and the motorcycle tapped),
+  replace the fixtures (package name and the weather card's town anonymised) and adjust `RideScreen`. The values are
+  as fresh as the app's last sync with the motorcycle. Seen on one phone, Polish UI, a bike whose tyre tiles show "--".
+
 - **Wireless Android Auto keeps the car's Wi-Fi to itself** (seen in the car: the plugin saw no Wi-Fi network, no
   Wi-Fi icon on the phone, AA working). An app cannot open a connection to the head unit then. So the head-unit plugin
-  calls the phone on port 7778 (`HeadUnitCalls`, `callPhones()` in `drivelog_bridge.cpp`); the phone→car way on 7777
+  calls the phone on port 7778 (`HeadUnitCalls` / `CallsRoute` in the plugin app, `PhoneCaller` in `headunit/src/bridge_caller.hpp`); the phone→car way on 7777
   stays for an ordinary Wi-Fi connection. Keep both.
 
 - **`engine.consumption`** is a raw counter with an unknown unit: `FuelCounter` in `plugins/id6/Cds.kt` assumes about

@@ -117,4 +117,25 @@ class Ui(private val context: Context) {
 
     /** "2.0 L (1998 cc)" */
     fun engine(cc: Int): String = String.format(Locale.getDefault(), "%.1f L (%d cc)", cc / 1000.0, cc)
+
+    /** Two views side by side, equally wide, with a gap between them (two buttons). */
+    fun twoButtons(left: android.view.View, right: android.view.View) = android.widget.LinearLayout(context).apply {
+        orientation = android.widget.LinearLayout.HORIZONTAL
+        addView(left, android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { rightMargin = dp(4) })
+        addView(right, android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = dp(4) })
+    }
+
+    /** The vertical column of a tab, with the usual margins. */
+    fun page() = android.widget.LinearLayout(context).apply {
+        orientation = android.widget.LinearLayout.VERTICAL
+        setPadding(dp(16), dp(8), dp(16), dp(24))
+    }
+
+    /** [content] in a vertical scroll view. */
+    fun scrolling(content: android.view.View) = android.widget.ScrollView(context).apply {
+        addView(content, android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT))
+    }
+
+    /** A long toast: what happened, in words (errors included). */
+    fun toast(text: String) = android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_LONG).show()
 }

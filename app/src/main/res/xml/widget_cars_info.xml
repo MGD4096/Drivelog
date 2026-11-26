@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Several vehicles on one widget (CarsWidget). Updated by the app whenever new values are saved. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="140dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="90dp"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="1800000"
+    android:configure="dev.drivelog.WidgetCarsActivity"
+    android:widgetFeatures="reconfigurable"
+    android:initialLayout="@layout/widget_cars"
+    android:previewLayout="@layout/widget_cars"
+    android:description="@string/widget_cars_description"
+    android:widgetCategory="home_screen" />

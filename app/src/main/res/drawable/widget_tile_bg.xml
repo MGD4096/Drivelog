@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One vehicle's tile on the several-vehicles widget (widget_cars). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/widget_tile" />
+    <corners android:radius="14dp" />
+</shape>

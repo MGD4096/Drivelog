@@ -35,6 +35,19 @@ object CarPluginContract {
     /** Raised only for changes either side cannot ignore; new Bundle keys and states need no new version. */
     const val API_VERSION = 1
 
+    /**
+     * Optional, for a plugin that learns the vehicle's values only after the trip (it reads them from another app once
+     * the vehicle has sent them there): a broadcast to Drivelog ([DRIVELOG_PACKAGE]) with this action and
+     * [EXTRA_PLUGIN_ID], [EXTRA_VALUES] (a [CarValuesBundle]) and [EXTRA_AT_MS] (when the vehicle reported them, epoch
+     * ms). Drivelog's receiver takes it only from apps that hold [PERMISSION]. It saves the values as the vehicle's latest
+     * ones and, when they fit, as the end values of the trip that ended last.
+     */
+    const val ACTION_READING = "dev.drivelog.CAR_READING"
+    const val EXTRA_PLUGIN_ID = "dev.drivelog.extra.PLUGIN_ID"
+    const val EXTRA_VALUES = "dev.drivelog.extra.VALUES"
+    const val EXTRA_AT_MS = "dev.drivelog.extra.AT_MS"
+    const val DRIVELOG_PACKAGE = "dev.drivelog"
+
     const val STATE_STOPPED = 0
     /** The car (its network, its adapter ...) is not there right now: not an error. */
     const val STATE_NO_CAR = 1
@@ -58,6 +71,7 @@ object CarValuesBundle {
     private const val SPEED = "speedKmh"
     private const val AVG_SPEED = "avgSpeedKmh"
     private const val FUEL_TOTAL = "fuelUsedTotalL"
+    private const val TYRES_BAR = "tyrePressuresBar"
 
     fun toBundle(v: CarValues): Bundle = Bundle().apply {
         v.odometerKm?.let { putDouble(ODOMETER, it) }
@@ -72,6 +86,7 @@ object CarValuesBundle {
         v.speedKmh?.let { putDouble(SPEED, it) }
         v.avgSpeedKmh?.let { putDouble(AVG_SPEED, it) }
         v.fuelUsedTotalL?.let { putDouble(FUEL_TOTAL, it) }
+        v.tyrePressuresBar?.let { putDoubleArray(TYRES_BAR, it.toDoubleArray()) }
     }
 
     /** Never throws: a value of the wrong type counts as unknown. The receiver still runs [CarValues.checked]. */
@@ -90,9 +105,10 @@ object CarValuesBundle {
             null
         }
         val open = try { b.getStringArrayList(OPEN) } catch (e: RuntimeException) { null }
+        val tyres = try { b.getDoubleArray(TYRES_BAR)?.toList() } catch (e: RuntimeException) { null }
         return CarValues(
             num(ODOMETER), num(FUEL), num(RANGE), num(AVG), num(OUTSIDE), num(INSIDE), open?.filterNotNull(),
-            num(BATTERY), flag(TYRES), num(SPEED), num(AVG_SPEED), num(FUEL_TOTAL),
+            num(BATTERY), flag(TYRES), num(SPEED), num(AVG_SPEED), num(FUEL_TOTAL), tyres,
         )
     }
 }

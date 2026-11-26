@@ -1,18 +1,31 @@
 package dev.drivelog.core
 
 import dev.drivelog.carapi.CarValues
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
+import dev.drivelog.core.car.CarEvent
+import dev.drivelog.core.car.EventType
+import dev.drivelog.core.car.FileFuelStore
+import dev.drivelog.core.car.FuelEntry
+import dev.drivelog.core.car.FuelLog
+import dev.drivelog.core.trip.FileTripStore
+import dev.drivelog.core.trip.MileageLog
+import dev.drivelog.core.trip.MonthlyStats
+import dev.drivelog.core.trip.Trip
+import dev.drivelog.core.trip.TripKind
+import dev.drivelog.core.trip.TripLog
+import dev.drivelog.core.trip.TripMeta
+import dev.drivelog.core.trip.TripSummary
 import java.io.File
 import java.nio.file.Files
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.ZoneOffset
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
 
 private val UTC: ZoneId = ZoneOffset.UTC
 private fun ms(date: String, hour: Int = 10): Long = LocalDate.parse(date).atTime(hour, 0).toInstant(ZoneOffset.UTC).toEpochMilli()

@@ -1,15 +1,21 @@
 package dev.drivelog.core
 
 import dev.drivelog.carapi.CarValues
+import dev.drivelog.core.car.CarState
+import dev.drivelog.core.trip.Csv
+import dev.drivelog.core.trip.FileTripStore
+import dev.drivelog.core.trip.Gpx
+import dev.drivelog.core.trip.TripRecorder
+import dev.drivelog.core.trip.TripStats
+import java.io.File
+import java.nio.file.Files
+import javax.xml.parsers.DocumentBuilderFactory
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * A whole drive without a car: the car plugin delivers neutral car values (as its link does: always the whole

@@ -1,5 +1,19 @@
 package dev.drivelog.core
 
+import dev.drivelog.core.car.CarDetails
+import dev.drivelog.core.car.CarOrder
+import dev.drivelog.core.car.ManualOdometer
+import dev.drivelog.core.car.OpenPartsText
+import dev.drivelog.core.car.VehicleSummary
+import dev.drivelog.core.car.Vin
+import dev.drivelog.core.text.Lang
+import dev.drivelog.core.text.Polish
+import dev.drivelog.core.text.tr
+import dev.drivelog.core.trip.TripJson
+import dev.drivelog.core.trip.TripMeta
+import dev.drivelog.core.trip.TripRecorder
+import dev.drivelog.core.trip.TripStats
+import dev.drivelog.core.trip.TripSummary
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

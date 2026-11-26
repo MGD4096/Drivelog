@@ -1,12 +1,16 @@
 package dev.drivelog.core
 
+import dev.drivelog.core.map.LatLon
+import dev.drivelog.core.map.RouteCache
+import dev.drivelog.core.map.RouteShape
+import dev.drivelog.core.trip.TrackPoint
+import java.nio.file.Files
+import kotlin.math.cos
+import kotlin.math.sin
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.nio.file.Files
-import kotlin.math.cos
-import kotlin.math.sin
 
 private fun pt(lat: Double, lon: Double) = TrackPoint(0, lat, lon, null, null, null)
 

@@ -95,3 +95,10 @@ class CarWifi(context: Context) {
         private const val CONNECT_TIMEOUT_MS = 3_000
     }
 }
+
+/** The phone calls the head unit over the car's Wi-Fi: an ordinary Wi-Fi connection (not with wireless Android Auto). */
+class WifiRoute(private val wifi: CarWifi, private val port: Int) : HeadUnitRoute {
+    override fun connect(): Socket? = wifi.connect(port)
+    override fun describe(): String = "Wi-Fi networks this app may use: ${wifi.visibleCount}"
+    override fun close() = wifi.stop()
+}

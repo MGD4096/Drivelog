@@ -1,0 +1,4 @@
+<resources>
+    <string name="widget_cars_label">Drivelog: pojazdy</string>
+    <string name="widget_cars_description">Kilka pojazdów naraz: paliwo, zasięg, akumulator i czy są zamknięte</string>
+</resources>

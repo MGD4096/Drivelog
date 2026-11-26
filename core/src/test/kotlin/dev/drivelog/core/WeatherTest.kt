@@ -1,8 +1,19 @@
 package dev.drivelog.core
 
-import dev.drivelog.carapi.Json
-
 import com.sun.net.httpserver.HttpServer
+import dev.drivelog.carapi.Json
+import dev.drivelog.core.map.Fix
+import dev.drivelog.core.map.Fixes
+import dev.drivelog.core.map.OpenMeteo
+import dev.drivelog.core.map.WeatherClient
+import dev.drivelog.core.map.WeatherKind
+import dev.drivelog.core.map.WeatherSource
+import dev.drivelog.core.map.Wmo
+import java.io.File
+import java.net.InetSocketAddress
+import java.nio.file.Files
+import java.util.Collections
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -11,11 +22,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.File
-import java.net.InetSocketAddress
-import java.nio.file.Files
-import java.util.Collections
-import java.util.concurrent.atomic.AtomicInteger
 
 private const val SAMPLE = """{"latitude":52.52,"longitude":13.419998,"generationtime_ms":0.05,"utc_offset_seconds":3600,
  "timezone":"Europe/Berlin","current_units":{"time":"iso8601","interval":"seconds","temperature_2m":"°C","apparent_temperature":"°C",

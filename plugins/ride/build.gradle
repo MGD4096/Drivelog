@@ -1,0 +1,42 @@
+// "Drivelog Ride": a separate app that reads a motorcycle's values from the maker's app on the phone (its screens,
+// through an accessibility service) and hands them to Drivelog in the neutral form of plugin-api.
+//   ./gradlew :plugins:ride:testDebugUnitTest     the screen parser (plain JVM tests)
+//   ./gradlew :plugins:ride:assembleDebug         the APK
+// Drivelog and this app must be signed with the same key (signature permission): both use the debug key here.
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'dev.drivelog.ride'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "dev.drivelog.ride"
+        minSdk 26
+        targetSdk 35
+        versionCode rootProject.ext.drivelogVersionCode
+        versionName rootProject.ext.drivelogVersionName
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation project(':plugin-api')
+    testImplementation 'junit:junit:4.13.2'
+}

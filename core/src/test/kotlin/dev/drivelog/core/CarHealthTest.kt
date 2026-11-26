@@ -1,5 +1,13 @@
 package dev.drivelog.core
 
+import dev.drivelog.core.car.CarHealth
+import dev.drivelog.core.car.CarSnapshot
+import dev.drivelog.core.storage.TripLoader
+import dev.drivelog.core.trip.FileTripStore
+import dev.drivelog.core.trip.Trip
+import dev.drivelog.core.trip.TripRecorder
+import java.io.File
+import java.nio.file.Files
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -7,8 +15,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
 
 class CarHealthTest {
     private lateinit var dir: File
@@ -38,6 +44,18 @@ class CarHealthTest {
         assertEquals(listOf(95.0, 74.0), CarHealth.batteryHistory("AA", store.list(), store, max = 2).map { it.percent })
         // stored and read back with the trip
         assertEquals(true, store.load("e")!!.endCar.tyrePressureWarning)
+    }
+
+    @Test
+    fun batteryHistoryNeedsOnlyALoaderNotTheFiles() {
+        val store = FileTripStore(dir)
+        val trips = listOf(trip("a", "AA", 1_000, 90.0, 89.0), trip("b", "AA", 2_000, 60.0, 61.0))
+        trips.forEach { store.save(it) }
+        val inMemory = trips.associateBy { it.id }
+        val loaded = ArrayList<String>()
+        val loader = TripLoader { id -> loaded += id; inMemory[id] }
+        assertEquals(listOf(90.0, 60.0), CarHealth.batteryHistory("AA", store.list(), loader).map { it.percent })
+        assertEquals(listOf("b", "a"), loaded)                           // newest first, only what it needs
     }
 
     @Test

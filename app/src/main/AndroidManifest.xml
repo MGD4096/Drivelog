@@ -57,20 +57,20 @@
         </activity>
 
         <activity
-            android:name=".CarActivity"
+            android:name=".car.CarActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden" />
 
-        <activity android:name=".CarTripsActivity" android:exported="false" />
+        <activity android:name=".car.CarTripsActivity" android:exported="false" />
 
         <activity
-            android:name=".PhotoGalleryActivity"
+            android:name=".car.PhotoGalleryActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden" />
 
 
-        <activity android:name=".MapActivity" android:exported="false" />
-        <activity android:name=".StatsActivity" android:exported="false" />
+        <activity android:name=".map.MapActivity" android:exported="false" />
+        <activity android:name=".trips.StatsActivity" android:exported="false" />
 
         <!-- Which car a home-screen widget shows: the launcher opens it when the widget is placed. -->
         <activity
@@ -83,8 +83,27 @@
             </intent-filter>
         </activity>
 
+        <!-- Which vehicles the several-vehicles widget shows: opened when that widget is placed. -->
+        <activity
+            android:name=".WidgetCarsActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@style/WidgetPicker">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <!-- The home-screen widget with several vehicles (CarsWidget). Like CarWidget: never rename or move it. -->
+        <receiver android:name=".CarsWidget" android:exported="true" android:label="@string/widget_cars_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_cars_info" />
+        </receiver>
+
         <!-- The Business / Private buttons of the "Trip finished" notification. -->
-        <receiver android:name=".TripKindReceiver" android:exported="false" />
+        <receiver android:name=".recording.TripKindReceiver" android:exported="false" />
 
         <!-- The home-screen widget. Exported because the launcher sends it APPWIDGET_UPDATE (a system broadcast). -->
         <receiver android:name=".CarWidget" android:exported="true" android:label="@string/app_name">
@@ -95,26 +114,37 @@
         </receiver>
 
         <service
-            android:name=".ReminderJobService"
+            android:name=".reminders.ReminderJobService"
             android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
         <service
-            android:name=".TripService"
+            android:name=".recording.TripService"
             android:exported="false"
             android:foregroundServiceType="location" />
 
         <!-- ACL_CONNECTED is a protected broadcast: only the system can send it, so exported is safe here. -->
         <receiver
-            android:name=".CarBluetoothReceiver"
+            android:name=".recording.CarBluetoothReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
             </intent-filter>
         </receiver>
 
+        <!-- Values a plugin reads after the trip (CarPluginContract.ACTION_READING). Exported, but only apps that hold
+             the plugin permission (signature: signed like Drivelog) can send to it. -->
+        <receiver
+            android:name=".plugin.PluginReadingReceiver"
+            android:exported="true"
+            android:permission="dev.drivelog.permission.CAR_PLUGIN">
+            <intent-filter>
+                <action android:name="dev.drivelog.CAR_READING" />
+            </intent-filter>
+        </receiver>
+
         <provider
-            android:name=".ExportProvider"
+            android:name=".trips.ExportProvider"
             android:authorities="${applicationId}.exports"
             android:exported="false"
             android:grantUriPermissions="true" />
