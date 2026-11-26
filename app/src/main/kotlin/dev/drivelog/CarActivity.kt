@@ -58,7 +58,7 @@ class CarActivity : Activity() {
     private val editor by lazy { CarEditor(this, ui, views, stores.details, address, { trips }) { render() } }
     private val serviceLog by lazy { ServiceLogPanel(this, ui, views, stores.details, stores.events, address, { trips }) { render() } }
     private val record by lazy {
-        CarRecordActions(this, ui, stores, car!!, io,
+        CarRecordActions(this, ui, stores, checkNotNull(car) { "the page is closing: no car" }, io,
             onChanged = { render() },
             onMoved = { target ->
                 startActivity(Intent(this, CarActivity::class.java).putExtra(EXTRA_ADDRESS, target.address))

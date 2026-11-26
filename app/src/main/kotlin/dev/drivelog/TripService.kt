@@ -1,27 +1,15 @@
 package dev.drivelog
 
 import dev.drivelog.core.tr
-import android.Manifest
 import android.app.Service
-import android.bluetooth.BluetoothDevice
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
-import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
 import android.os.Build
-import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import dev.drivelog.core.CarHealth
-import dev.drivelog.core.CarPlugins
-import dev.drivelog.core.LastReadingStore
-import dev.drivelog.pluginapi.CarPluginContract
+import dev.drivelog.core.LiveSpeed
 import dev.drivelog.core.TripStore
 import dev.drivelog.core.TripRecorder
 import dev.drivelog.core.TripStats
@@ -31,6 +19,10 @@ import java.util.Locale
 /**
  * Records one trip. It runs from the moment the car connects until it disconnects (plus a short grace period), and
  * while it runs it is bound to the car's plugin app (if the car uses one), which sends the car data.
+ *
+ * The parts: [TripLocation] (GPS), [CarConnectionWatch] (Bluetooth), [TripPlugin] (the car's plugin app),
+ * [CarRecordKeeper] (latest values, parking, battery), [TripDrafts] (crash safety). This class runs the trip's
+ * lifecycle: start, tick, disconnect and grace period, finish and save.
  *
  * Everything here runs on the main thread except the plugin's calls (binder threads), which only touch
  * [AppState.car] (thread-safe). The recorder and the store are used from the main thread only.
@@ -42,23 +34,17 @@ class TripService : Service() {
     private val recorder = TripRecorder()
     private lateinit var store: TripStore
 
-    private var pluginLink: CarPluginLink? = null
-    /** Set when the car uses a plugin that is not installed (or not signed like Drivelog). */
-    private var pluginMissing: String? = null
     /** The tyre pressure warning was notified in this trip. */
     private var tyreWarned = false
-    /** The car values saved so far ([LastReadingStore]): the time of the delivery saved last. */
-    private var savedReadingMs = 0L
-    private var locationManager: LocationManager? = null
-    private var locationRegistered = false
-    private var gpsProblem: String? = null
-    private var receiverRegistered = false
+    private lateinit var drafts: TripDrafts
+    private val plugin by lazy { TripPlugin(this, AppState.car) }
+    private val record by lazy { CarRecordKeeper(this, stores.details, stores.readings) }
+    private val location by lazy { TripLocation(this, paused = { disconnectedAtMs != 0L }) { recorder.onFix(it) } }
+    private val connection by lazy { CarConnectionWatch(this, { carAddress }, ::onCarDisconnected, ::onCarReconnected) }
 
     private var running = false
     private var carAddress = ""
     private var carName = ""
-    private var lastFixMs = 0L
-    private var lastSpeedKmh: Double? = null
     private var ticks = 0
 
     /** Non-zero while the car is disconnected and we wait to see whether it comes back. */
@@ -73,48 +59,11 @@ class TripService : Service() {
 
     private val finishAfterGrace = Runnable { finishTrip(tr("Car disconnected")) }
 
-    private val locationListener = object : LocationListener {
-        override fun onLocationChanged(location: Location) {
-            // While waiting for a reconnect the car is parked: do not record the walk away from it
-            if (disconnectedAtMs != 0L) return
-            lastFixMs = System.currentTimeMillis()
-            lastSpeedKmh = if (location.hasSpeed()) location.speed * 3.6 else null
-            recorder.onFix(
-                TripRecorder.Fix(
-                    timeMs = location.time,
-                    lat = location.latitude,
-                    lon = location.longitude,
-                    altitudeM = if (location.hasAltitude()) location.altitude else null,
-                    speedMps = if (location.hasSpeed()) location.speed.toDouble() else null,
-                    accuracyM = if (location.hasAccuracy()) location.accuracy.toDouble() else null,
-                )
-            )
-        }
-
-        // Android 10 and older call these on the interface; they have no default implementation there
-        override fun onProviderEnabled(provider: String) {}
-        override fun onProviderDisabled(provider: String) {}
-
-        @Deprecated("Deprecated in Java")
-        override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
-    }
-
-    private val bluetoothReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            val address = bluetoothDeviceFrom(intent)?.address ?: return
-            if (!address.equals(carAddress, ignoreCase = true)) return
-            when (intent.action) {
-                BluetoothDevice.ACTION_ACL_DISCONNECTED -> onCarDisconnected()
-                BluetoothDevice.ACTION_ACL_CONNECTED -> onCarReconnected()
-            }
-        }
-    }
-
     override fun onCreate() {
         super.onCreate()
-        locationManager = getSystemService(LocationManager::class.java)
         try {
             store = stores.requireTrips()
+            drafts = TripDrafts(store, recorder)
         } catch (e: IOException) {
             Notifications.problem(this, tr("Cannot store trips"), e.message ?: tr("The trips folder cannot be created."))
             stopSelf()
@@ -155,10 +104,10 @@ class TripService : Service() {
 
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
-        if (running) saveDraft()          // killed while recording: the draft is recovered on the next start
-        stopLocation()
-        unregisterBluetooth()
-        stopPlugin()
+        if (running) drafts.save()          // killed while recording: the draft is recovered on the next start
+        location.stop()
+        connection.stop()
+        plugin.stop()
         running = false
         AppState.status = ServiceStatus(message = AppState.status.message)
         super.onDestroy()
@@ -189,17 +138,17 @@ class TripService : Service() {
     private fun beginTrip(address: String, name: String) {
         carAddress = address
         carName = name
-        recoverDraft()
+        drafts.recover()
         AppState.car.reset()        // values from the last drive must not look current
         recorder.begin(address, name, System.currentTimeMillis(), AppState.car.snapshot())
         running = true
         disconnectedAtMs = 0L
         ticks = 0
         tyreWarned = false
-        savedReadingMs = 0L
-        startPlugin()
-        startLocation()
-        registerBluetooth()
+        record.newTrip()
+        plugin.start(stores.details.get(address))
+        location.start()
+        connection.start()
         handler.removeCallbacks(tick)
         handler.postDelayed(tick, TICK_MS)
         publish(Phase.RECORDING)
@@ -227,28 +176,28 @@ class TripService : Service() {
         recorder.onCar(now, AppState.car.snapshot())
         recorder.onTotals(AppState.car.totals())
         val trip = recorder.finish(endMs)
-        saveReading()
+        record.saveReading(carAddress, AppState.car)
         running = false
-        stopLocation()
-        unregisterBluetooth()
-        stopPlugin()
+        location.stop()
+        connection.stop()
+        plugin.stop()
 
         var message = "$reason."
         var savedId: String? = null
         if (trip != null) {
             val summary = TripStats.summarize(trip)
-            rememberParking(summary.endLat, summary.endLon, endMs)
+            record.rememberParking(carAddress, summary.endLat, summary.endLon, endMs)
             if (!TripStats.isWorthKeeping(summary)) {
                 message = tr("{0}. The trip was too short and was not saved.", reason)
-                clearDraft()
+                drafts.clear()
             } else {
                 try {
                     // the driver from the settings, so the mileage log only needs the kind of trip
                     store.save(AppSettings.driver(this)?.let { trip.copy(log = trip.log.copy(driver = it)) } ?: trip)
-                    clearDraft()
+                    drafts.clear()
                     message = tr("{0}. Saved {1} km.", reason, km(summary.distanceKm))
                     savedId = trip.id
-                    checkBattery()
+                    record.checkBattery(carAddress, carName, store)
                 } catch (e: IOException) {
                     message = tr("{0}, but the trip could not be saved: {1}", reason, e.message)     // the draft stays for a retry
                 }
@@ -268,7 +217,7 @@ class TripService : Service() {
         val car = AppState.car.snapshot()
         recorder.onCar(now, car)
         recorder.onTotals(AppState.car.totals())
-        saveReading()
+        record.saveReading(carAddress, AppState.car)
         if (car.tyrePressureWarning == true && !tyreWarned) {          // once per trip
             tyreWarned = true
             Notifications.carWarning(
@@ -276,7 +225,7 @@ class TripService : Service() {
                 tr("{0} reports a tyre pressure warning. Check the tyres.", carName), carAddress,
             )
         }
-        if (++ticks % DRAFT_EVERY_TICKS == 0) saveDraft()
+        if (++ticks % DRAFT_EVERY_TICKS == 0) drafts.save()
         val phase = if (disconnectedAtMs != 0L) Phase.WAITING_FOR_RECONNECT else Phase.RECORDING
         publish(phase)
         val s = AppState.status
@@ -291,159 +240,22 @@ class TripService : Service() {
         Notifications.updateTrip(this, carName, text)
     }
 
-    /** The car's own speed when the plugin sent it in the last few seconds; GPS is the fallback. */
-    private fun carSpeedKmh(now: Long): Double? =
-        AppState.car.snapshot().speedKmh?.takeIf { now - AppState.car.lastUpdateMillis < 10_000 }
-
     private fun publish(phase: Phase) {
         val now = System.currentTimeMillis()
         AppState.status = ServiceStatus(
             phase = phase,
             carName = carName,
-            pluginLabel = pluginLink?.label,
-            pluginState = pluginLink?.state ?: CarPluginContract.STATE_STOPPED,
-            pluginText = pluginLink?.text.orEmpty(),
-            pluginMissing = pluginMissing,
-            gpsProblem = gpsProblem,
-            lastFixMs = lastFixMs,
-            speedKmh = carSpeedKmh(now) ?: lastSpeedKmh?.takeIf { now - lastFixMs < 10_000 },
+            pluginLabel = plugin.label,
+            pluginState = plugin.state,
+            pluginText = plugin.text,
+            pluginMissing = plugin.missing,
+            gpsProblem = location.problem,
+            lastFixMs = location.lastFixMs,
+            // the car's own speed while the plugin sends it; the phone's GPS otherwise
+            speedKmh = LiveSpeed.pick(AppState.car.snapshot().speedKmh, AppState.car.lastUpdateMillis, location.lastSpeedKmh, location.lastFixMs, now),
             trip = if (recorder.isRecording) recorder.liveSummary(now) else null,
             reconnectDeadlineMs = if (disconnectedAtMs != 0L) disconnectedAtMs + GRACE_MS else 0L,
         )
-    }
-
-    // ---- pieces ------------------------------------------------------------------------------------------------------
-
-    /** Binds the plugin app the car uses (Edit car → plugin) for as long as the trip runs. Nothing for a car without one. */
-    private fun startPlugin() {
-        if (pluginLink != null) return
-        pluginMissing = null
-        val details = stores.details.get(carAddress)
-        if (!details.usesPlugin) return
-        val id = details?.plugin ?: CarPlugins.DEFAULT
-        val installed = CarPluginRegistry.installed(this).firstOrNull { it.plugin.id == id }
-        if (installed == null) {
-            pluginMissing = id
-            return
-        }
-        pluginLink = CarPluginLink(this, installed, AppState.car).also { it.connect() }
-    }
-
-    /**
-     * Saves what the car sent last, whether the trip is kept or not, so the car page shows it after the trip. Only
-     * when something new arrived since the last save (at most every tick).
-     */
-    private fun saveReading() {
-        val at = AppState.car.lastUpdateMillis
-        if (at == 0L || at == savedReadingMs) return
-        try {
-            stores.readings.put(carAddress, AppState.car.snapshot(), at)
-            savedReadingMs = at
-            CarWidget.update(this)
-        } catch (e: IOException) {
-            // tried again on the next tick
-        }
-    }
-
-    /**
-     * Where the car was left, also after a trip too short to keep (moving the car a few metres is still moving it).
-     * The car page and the Cars tab show it when it is newer than the end of the latest saved trip.
-     */
-    private fun rememberParking(lat: Double?, lon: Double?, atMs: Long) {
-        if (lat == null || lon == null) return
-        try {
-            val cars = stores.details
-            cars.put(carAddress, cars.get(carAddress).withParked(lat, lon, atMs))
-        } catch (e: IOException) {
-            // the latest saved trip still tells where it is
-        }
-    }
-
-    /** After a trip is saved: a notification when the 12 V battery has just dropped below CarHealth.LOW_BATTERY_PERCENT. */
-    private fun checkBattery() {
-        val history = CarHealth.batteryHistory(carAddress, store.list(), store)
-        if (!CarHealth.batteryJustGotLow(history)) return
-        Notifications.carWarning(
-            this, Notifications.ID_BATTERY, tr("12 V battery low"),
-            tr("{0}: the 12 V battery was at {1} % at the start of the trip ({2}). Have it checked or charged.",
-                carName, String.format(Locale.getDefault(), "%.0f", history.last().percent), CarHealth.trendText(history) ?: ""),
-            carAddress,
-        )
-    }
-
-    private fun stopPlugin() {
-        pluginLink?.disconnect()
-        pluginLink = null
-        pluginMissing = null
-    }
-
-    private fun startLocation() {
-        gpsProblem = null
-        val lm = locationManager
-        val allowed = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (lm == null || !lm.allProviders.contains(LocationManager.GPS_PROVIDER)) {
-            gpsProblem = tr("no GPS")
-            return
-        }
-        if (!allowed) {
-            gpsProblem = tr("location not allowed")
-            return
-        }
-        try {
-            lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 0f, locationListener, Looper.getMainLooper())
-            locationRegistered = true
-        } catch (e: SecurityException) {
-            gpsProblem = tr("location not allowed")
-        }
-    }
-
-    private fun stopLocation() {
-        if (locationRegistered) {
-            locationManager?.removeUpdates(locationListener)
-            locationRegistered = false
-        }
-    }
-
-    private fun registerBluetooth() {
-        if (receiverRegistered) return
-        val filter = IntentFilter().apply {
-            addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
-            addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
-        }
-        if (Build.VERSION.SDK_INT >= 33) {
-            registerReceiver(bluetoothReceiver, filter, Context.RECEIVER_EXPORTED)
-        } else {
-            registerReceiver(bluetoothReceiver, filter)
-        }
-        receiverRegistered = true
-    }
-
-    private fun unregisterBluetooth() {
-        if (!receiverRegistered) return
-        try { unregisterReceiver(bluetoothReceiver) } catch (e: IllegalArgumentException) { /* already gone */ }
-        receiverRegistered = false
-    }
-
-    // ---- crash safety ----------------------------------------------------------------------------------------------------
-
-    private fun saveDraft() {
-        if (!recorder.isRecording) return
-        try { store.saveDraft(recorder.snapshotTrip(System.currentTimeMillis())) } catch (e: IOException) { /* try again next minute */ }
-    }
-
-    private fun clearDraft() {
-        store.clearDraft()
-    }
-
-    /** A draft left by a killed service becomes a normal saved trip. */
-    private fun recoverDraft() {
-        val draft = store.loadDraft() ?: return
-        try {
-            if (TripStats.isWorthKeeping(TripStats.summarize(draft))) store.save(draft)
-            store.clearDraft()
-        } catch (e: IOException) {
-            // keep it and try again next time
-        }
     }
 
     private fun km(value: Double) = String.format(Locale.getDefault(), "%.1f", value)

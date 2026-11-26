@@ -48,7 +48,7 @@ ARM compilers run in Docker images (`headunit/toolchain/run.sh`), Java is the JB
 - `if __name__ == "__main__": main()`; constants at the top in UPPER_CASE; functions with type hints and docstrings.
 - Deterministic output (fixed zip timestamps and order) so regenerated zips only change when the content does.
   The zips are committed.
-- Texts for the HMI stay ASCII; ids must match `src/drivelog_bridge.cpp` (documented in the module docstring).
+- Texts for the HMI stay ASCII; ids must match `src/drivelog_bridge.cpp` (screen) and `src/bridge_values.hpp` (states) (documented in the module docstring).
 - `PROPS` equals the number of CDS properties in `kProperties`.
 
 ## Makefile

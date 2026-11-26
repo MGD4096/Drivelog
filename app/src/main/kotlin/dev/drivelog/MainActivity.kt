@@ -83,7 +83,7 @@ class MainActivity : Activity() {
         loadTrips()
         handler.post(refresh)
         ReminderScheduler.ensureScheduled(this)
-        io.execute { ReminderCheck.run(this) }
+        io.execute { ReminderCheck.run(this); AutoBackup.runIfDue(this) }
     }
 
     override fun onPause() {

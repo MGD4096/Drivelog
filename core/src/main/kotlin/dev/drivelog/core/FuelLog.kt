@@ -90,7 +90,9 @@ object FuelLog {
             if (lastFull != null) litres += e.liters
             if (e.fullTank) {
                 val from = lastFull
-                if (from != null && e.odometerKm!! - from.odometerKm!! >= 10.0) out += TankInterval(from.odometerKm, e.odometerKm, litres, e.atMs)
+                val fromKm = from?.odometerKm
+                val toKm = e.odometerKm
+                if (fromKm != null && toKm != null && toKm - fromKm >= 10.0) out += TankInterval(fromKm, toKm, litres, e.atMs)
                 lastFull = e
                 litres = 0.0
             }

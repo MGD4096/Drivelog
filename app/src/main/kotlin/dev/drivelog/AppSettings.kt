@@ -15,6 +15,9 @@ object AppSettings {
     private const val KEY_THEME = "theme"
     private const val KEY_DRIVER = "driver"
     private const val KEY_DISMISSED_REFUELS = "dismissed_refuels"
+    private const val KEY_BACKUP_FOLDER = "auto_backup_folder"
+    private const val KEY_BACKUP_LAST = "auto_backup_last"
+    private const val KEY_BACKUP_ERROR = "auto_backup_error"
 
     val DAY_CHOICES = listOf(3, 7, 14, 21, 30, 45, 60)
     val KM_CHOICES = listOf(500, 1000, 1500, 2000, 3000, 5000)
@@ -65,6 +68,21 @@ object AppSettings {
         prefs(c).edit().putStringSet(KEY_DISMISSED_REFUELS, HashSet(dismissedRefuels(c).toList().takeLast(200) + key)).apply()
 
     /** Which reminder stages have been announced already (see ReminderPlanner). */
+    /** The folder (a document tree URI) that gets a backup every week, or null when the automatic backup is off. */
+    fun autoBackupFolder(c: Context): String? = prefs(c).getString(KEY_BACKUP_FOLDER, null)
+
+    fun setAutoBackupFolder(c: Context, uri: String?) =
+        prefs(c).edit().putString(KEY_BACKUP_FOLDER, uri).remove(KEY_BACKUP_LAST).remove(KEY_BACKUP_ERROR).apply()
+
+    /** When the last automatic backup was written (0: never), and why the last try failed (null: it did not). */
+    fun autoBackupLast(c: Context): Long = prefs(c).getLong(KEY_BACKUP_LAST, 0L)
+    fun autoBackupError(c: Context): String? = prefs(c).getString(KEY_BACKUP_ERROR, null)
+
+    fun setAutoBackupResult(c: Context, atMs: Long?, error: String?) = prefs(c).edit().apply {
+        if (atMs != null) putLong(KEY_BACKUP_LAST, atMs)
+        putString(KEY_BACKUP_ERROR, error)
+    }.apply()
+
     fun notified(c: Context): Set<String> = prefs(c).getStringSet(KEY_NOTIFIED, emptySet())?.toSet() ?: emptySet()
 
     fun setNotified(c: Context, keys: Set<String>) = prefs(c).edit().putStringSet(KEY_NOTIFIED, HashSet(keys)).apply()

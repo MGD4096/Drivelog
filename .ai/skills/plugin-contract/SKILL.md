@@ -22,7 +22,7 @@ older other side.
 - Values cross the boundary in the neutral format (km, litres, °C, %, km/h). The plugin converts units (mph → km/h,
   raw counters → litres); Drivelog never sees a car maker's format.
 - `CarValues.checked()` drops values outside their plausible ranges. Give every new field a range and a test.
-- Open parts are labels of `CarValues.PART_LABELS`, and `CarPart` in `core/Vehicle.kt` lists exactly the same.
+- Open parts are labels of `CarValues.PART_LABELS`, and `CarPart` in `core/OpenParts.kt` lists exactly the same.
 
 ## SOLID in the contract
 

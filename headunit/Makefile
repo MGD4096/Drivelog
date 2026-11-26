@@ -9,7 +9,7 @@
 
 NAME        = DrivelogBridge
 SRC         = src/drivelog_bridge.cpp
-HDR         = src/bridge_core.hpp
+HDR         = $(wildcard src/*.hpp)
 PLUGIN_FILES = $(NAME).manifest $(NAME).xml $(NAME)_ALL_Texts.zip $(NAME)_ALL_Images.zip
 
 # ---- EntryNav2: Linux ARMv7 hard-float, eglibc 2.15 (toolchain/Dockerfile) ------------------------------------------

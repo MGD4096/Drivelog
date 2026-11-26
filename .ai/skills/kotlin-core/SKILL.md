@@ -26,7 +26,7 @@ kotlinx.serialization, Moshi, Mockito, AssertJ...).
   placeholders in both. `LangTest` fails otherwise. A string with `\n` is a different key from one without.
 - Renames keep old data readable (e.g. `Backup.OLD_FORMAT`). A stored JSON field that is renamed or removed still
   has to be read; new fields are optional with a default.
-- `CarPart` in `core/Vehicle.kt` lists exactly `CarValues.PART_LABELS` (`CarStateTest`).
+- `CarPart` in `core/OpenParts.kt` lists exactly `CarValues.PART_LABELS` (`CarStateTest`).
 
 ## Good practices (follow them in new code even where older code does not)
 

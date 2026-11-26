@@ -193,8 +193,8 @@ object CounterFuel {
     /** Tank litres per counter litre over the trips with both; 1.0 until there is enough to compare. */
     fun factor(trips: List<TripMeta>): Double {
         val both = trips.map { it.summary }.filter { it.consumptionLPer100Km != null && it.fuelUsedL != null && (it.counterFuelL ?: 0.0) > 0 }
-        val tank = both.sumOf { it.fuelUsedL!! }
-        val counter = both.sumOf { it.counterFuelL!! }
+        val tank = both.sumOf { it.fuelUsedL ?: 0.0 }
+        val counter = both.sumOf { it.counterFuelL ?: 0.0 }
         if (tank < MIN_TANK_LITERS || counter <= 0) return 1.0
         return (tank / counter).coerceIn(0.25, 4.0)
     }

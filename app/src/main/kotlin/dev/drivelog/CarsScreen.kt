@@ -78,7 +78,7 @@ class CarsScreen(
             })
             return
         }
-        list.addView(widgets.weatherTileHere(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+        list.addView(WeatherTile(activity, ui).here(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             bottomMargin = ui.dp(8)
         })
         for (car in cars) list.addView(card(car), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {

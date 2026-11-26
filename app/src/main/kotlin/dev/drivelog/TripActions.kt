@@ -4,25 +4,16 @@ import dev.drivelog.core.trn
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.net.Uri
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
-import android.widget.TextView
-import android.widget.Toast
-import dev.drivelog.core.Csv
 import dev.drivelog.core.CounterFuel
 import dev.drivelog.core.TripKind
-import dev.drivelog.core.TripLog
 import dev.drivelog.core.TripStore
-import dev.drivelog.core.Gpx
 import dev.drivelog.core.Trip
 import dev.drivelog.core.TripMeta
-import java.io.File
-import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -32,8 +23,9 @@ import java.util.concurrent.ExecutorService
 import dev.drivelog.core.tr
 
 /**
- * What can be done with one recorded trip: look at its figures, show it on a map, share it as GPX or CSV, delete it.
- * Shared by the trip list and the list of one car's trips. [onChanged] is called after a trip is deleted.
+ * The list of trips and what can be done with one: look at its figures, show it on a map, delete it; its mileage-log
+ * details ([TripLogEditor]) and sharing it ([TripShare]) are parts of their own. Shared by the trip list and the list
+ * of one car's trips. [onChanged] is called after a trip is changed or deleted.
  */
 class TripActions(
     private val activity: Activity,
@@ -43,8 +35,8 @@ class TripActions(
     private val onChanged: () -> Unit,
 ) {
     private val stores = Stores(activity)
-
-    private val carDetails = stores.details
+    private val logEditor = TripLogEditor(activity, ui, store, io, onChanged)
+    private val share = TripShare(activity, ui, store, io)
 
     /** The model of the car when it is filled in, otherwise the name of its Bluetooth device. */
     private fun carLabel(m: TripMeta): String =
@@ -132,7 +124,7 @@ class TripActions(
             orientation = LinearLayout.VERTICAL
             addView(ui.body().apply { text = whenText(m.startMs); setTypeface(typeface, Typeface.BOLD) })
             if (showCar) addView(ui.body().apply { text = carLabel(m); textSize = 13f; setTextColor(Colors.subtle) })
-            logLine(m)?.let { line -> addView(ui.body().apply { text = line; textSize = 13f; setTextColor(if (m.log.kind == TripKind.BUSINESS) strong else Colors.subtle); maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }) }
+            logEditor.line(m).let { line -> addView(ui.body().apply { text = line; textSize = 13f; setTextColor(if (m.log.kind == TripKind.BUSINESS) strong else Colors.subtle); maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }) }
         }
         val right = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
@@ -194,12 +186,15 @@ class TripActions(
             }
             append("\n" + tr("Duration: {0}, moving {1}", ui.duration(s.durationMs), ui.duration(s.movingTimeMs)))
             s.avgMovingSpeedKmh?.let { append("\n" + tr("Average speed while moving: {0} km/h", ui.f0(it))) }
-            s.maxSpeedKmh?.let { append("\n" + tr("Top speed: {0} km/h", ui.f0(it))) }
+            s.maxSpeedKmh?.let { append("\n" + tr("Top speed: {0} km/h", ui.f0(it)) + if (s.speedFromCar) tr(" (car's speed)") else tr(" (GPS)")) }
+            s.carAvgSpeedKmh?.let { append("\n" + tr("Car's own average speed: {0} km/h", ui.f0(it))) }
             s.startOdometerKm?.let { from -> append("\n" + tr("Odometer: {0} → {1} km", ui.f0(from), ui.f0(s.endOdometerKm ?: from))) }
             s.startFuelL?.let { from -> append("\n" + tr("Fuel in tank: {0} → {1} L", ui.f0(from), ui.f0(s.endFuelL ?: from))) }
             s.fuelUsedL?.let { append("\n" + tr("Fuel used: {0} L (tank level is in whole litres)", ui.f1(it))) }
             if (s.refueledL > 0) append("\n" + tr("Refuelled during the trip: {0} L", ui.f0(s.refueledL)))
-            s.consumptionLPer100Km?.let { append("\n" + tr("Consumption: {0} L/100 km", ui.f1(it))) }
+            // without a tank comparison (short trips), the car's fuel counter, scaled by the earlier trips ([CounterFuel])
+            if (s.fuelUsedL == null) s.counterFuelL?.let { append("\n" + tr("Fuel used by the car's fuel counter: {0} L (estimate)", ui.f1(it * factor(m)))) }
+            consumption(m)?.let { (v, counter) -> append("\n" + tr("Consumption: {0} L/100 km", ui.f1(v)) + if (counter) tr(" (fuel counter, estimate)") else "") }
             s.carAvgConsumptionKmPerL?.let { append("\n" + tr("Car's own average: {0} km/L", ui.f1(it))) }
         }
         val body = LinearLayout(activity).apply {
@@ -213,144 +208,25 @@ class TripActions(
                 preview.setOnClickListener { openMap(m) }
             }
             addView(ui.body().apply { text = message; textSize = 14f })
-            addView(logBox(m) { dialog?.dismiss(); editLog(m) })
+            addView(logEditor.box(m) { dialog?.dismiss(); logEditor.edit(m) })
         }
         dialog = AlertDialog.Builder(activity)
             .setTitle(tr("Trip"))
             .setView(android.widget.ScrollView(activity).apply { addView(body) })
             .setPositiveButton(tr("Map")) { _, _ -> openMap(m) }
-            .setNeutralButton(tr("Share…")) { _, _ -> chooseExport(m) }
+            .setNeutralButton(tr("Share…")) { _, _ -> share.choose(m) }
             .setNegativeButton(tr("Delete")) { _, _ -> confirmDelete(m) }
             .show()
     }
 
     private var dialog: AlertDialog? = null
 
-    // ---- mileage log ---------------------------------------------------------------------------------------------------
-
-    /** "Business · Client visit · Warszawa – Radom" for the card; an unmarked trip shows as private. */
-    private fun logLine(m: TripMeta): String? {
-        val l = m.log
-        return listOfNotNull(l.kindOrDefault.label, l.purpose, l.route).joinToString("  ·  ")
-    }
-
-    /** The trip's mileage-log details in the details dialog, tapped to change them. */
-    private fun logBox(m: TripMeta, onEdit: () -> Unit): View = LinearLayout(activity).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(ui.dp(12), ui.dp(10), ui.dp(12), ui.dp(10))
-        background = GradientDrawable().apply { setColor(soft); cornerRadius = ui.dp(12).toFloat() }
-        addView(ui.body().apply { text = tr("Mileage log"); textSize = 12f; setTextColor(strong); setTypeface(typeface, Typeface.BOLD) })
-        val l = m.log
-        val lines = listOfNotNull(
-            l.kindOrDefault.label + if (l.kind == null) tr(" (default)") else "",
-            l.purpose?.let { tr("Purpose: {0}", it) },
-            l.route?.let { tr("Route: {0}", it) },
-            l.driver?.let { tr("Driver: {0}", it) },
-        )
-        addView(ui.body().apply {
-            text = lines.joinToString("\n") + "\n" + tr("Tap to change.")
-            textSize = 14f; setTextColor(strong)
-        })
-        isClickable = true
-        setOnClickListener { onEdit() }
-        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.dp(12) }
-    }
-
-    /** Business or private, purpose, route and driver of one trip. */
-    fun editLog(m: TripMeta) {
-        val old = m.log
-        var kind: TripKind = old.kindOrDefault
-        fun field(hint: String, value: String?) = android.widget.EditText(activity).apply {
-            this.hint = hint
-            setSingleLine()
-            filters = arrayOf(android.text.InputFilter.LengthFilter(200))
-            setText(value ?: "")
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-        }
-        val purpose = field(tr("e.g. visit to a client"), old.purpose)
-        val route = field(tr("e.g. Warszawa – Radom"), old.route)
-        val driver = field(tr("Name and surname"), old.driver ?: AppSettings.driver(activity))
-        val kinds = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL }
-        val pills = ArrayList<Pair<TripKind, TextView>>()
-        fun showKinds() {
-            for ((k, pill) in pills) {
-                val on = k == kind
-                pill.background = GradientDrawable().apply { setColor(if (on) strong else Colors.card); cornerRadius = ui.dp(20).toFloat() }
-                pill.setTextColor(if (on) Color.WHITE else Colors.text)
-            }
-        }
-        for ((i, k) in listOf(TripKind.BUSINESS, TripKind.PRIVATE).withIndex()) {
-            val pill = ui.body().apply {
-                text = k.label
-                gravity = android.view.Gravity.CENTER
-                setPadding(ui.dp(8), ui.dp(10), ui.dp(8), ui.dp(10))
-                isClickable = true
-                setOnClickListener { kind = k; showKinds() }
-            }
-            pills += k to pill
-            kinds.addView(pill, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { if (i > 0) leftMargin = ui.dp(6) })
-        }
-        showKinds()
-        fun label(text: String) = ui.body().apply { this.text = text; textSize = 13f; setTextColor(Colors.subtle); setPadding(0, ui.dp(12), 0, 0) }
-        val form = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(ui.dp(20), ui.dp(8), ui.dp(20), ui.dp(8))
-            addView(kinds)
-            addView(label(tr("Purpose of the trip")))
-            addView(purpose)
-            addView(label(tr("Route (from – to)")))
-            addView(route)
-            addView(label(tr("Driver")))
-            addView(driver)
-        }
-        // The route in words from the start and end of the GPS track (the phone's own geocoder), when it is empty
-        val s = m.summary
-        val aLat = s.startLat; val aLon = s.startLon; val bLat = s.endLat; val bLon = s.endLon
-        if (old.route == null && aLat != null && aLon != null && bLat != null && bLon != null) {
-            io.execute {
-                val text = Places.route(activity, aLat, aLon, bLat, bLon)
-                activity.runOnUiThread { if (text != null && route.text.isEmpty()) route.setText(text) }
-            }
-        }
-        AlertDialog.Builder(activity)
-            .setTitle(tr("Mileage log"))
-            .setView(android.widget.ScrollView(activity).apply { addView(form) })
-            .setPositiveButton(tr("Save")) { _, _ ->
-                val log = TripLog(kind, purpose.text.toString(), route.text.toString(), driver.text.toString()).cleaned()
-                log.driver?.let { if (AppSettings.driver(activity) == null) AppSettings.setDriver(activity, it) }
-                saveLog(m.id, log)
-            }
-            .setNegativeButton(tr("Cancel"), null)
-            .show()
-    }
-
-    private fun saveLog(id: String, log: TripLog) {
-        val s = store ?: return
-        io.execute {
-            val ok = try { s.updateLog(id, log) != null } catch (e: IOException) { false }
-            activity.runOnUiThread {
-                if (activity.isDestroyed) return@runOnUiThread
-                if (!ok) toast(tr("Could not save the trip.")) else onChanged()
-            }
-        }
-    }
-
-    private fun toast(text: String) = Toast.makeText(activity, text, Toast.LENGTH_LONG).show()
-
     private fun openMap(m: TripMeta) {
         if (m.summary.startLat == null) {
-            toast(tr("This trip has no GPS track to show."))
+            ui.toast(tr("This trip has no GPS track to show."))
             return
         }
         activity.startActivity(Intent(activity, MapActivity::class.java).putExtra(MapActivity.EXTRA_TRIP_ID, m.id))
-    }
-
-    private fun chooseExport(m: TripMeta) {
-        AlertDialog.Builder(activity)
-            .setTitle(tr("Share as"))
-            .setItems(arrayOf(tr("GPX (route and car values)"), tr("CSV (spreadsheet)"))) { _, which -> export(m, gpx = which == 0) }
-            .setNegativeButton(tr("Cancel"), null)
-            .show()
     }
 
     private fun confirmDelete(m: TripMeta) {
@@ -369,34 +245,4 @@ class TripActions(
             .show()
     }
 
-    private fun export(m: TripMeta, gpx: Boolean) {
-        val s = store ?: return
-        io.execute {
-            val trip: Trip? = s.load(m.id)
-            var uri: Uri? = null
-            if (trip != null) {
-                try {
-                    val dir = File(activity.cacheDir, ExportProvider.EXPORT_DIR).apply { mkdirs() }
-                    dir.listFiles()?.forEach { it.delete() }           // keep only the file being shared
-                    val file = File(dir, "${trip.id}.${if (gpx) "gpx" else "csv"}")
-                    file.writeText(if (gpx) Gpx.write(trip) else Csv.write(trip))
-                    uri = Uri.parse("content://${activity.packageName}.exports/${file.name}")
-                } catch (e: IOException) {
-                    uri = null
-                }
-            }
-            activity.runOnUiThread {
-                if (activity.isDestroyed) return@runOnUiThread
-                if (uri == null) {
-                    toast(tr("Could not prepare the file."))
-                } else {
-                    val send = Intent(Intent.ACTION_SEND)
-                        .setType(if (gpx) "application/gpx+xml" else "text/csv")
-                        .putExtra(Intent.EXTRA_STREAM, uri)
-                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    activity.startActivity(Intent.createChooser(send, tr("Share trip")))
-                }
-            }
-        }
-    }
 }

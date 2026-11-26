@@ -55,7 +55,8 @@ class CarInfoDialog(private val activity: Activity, private val ui: Ui, private 
             }
             form.addView(ui.body().apply { text = source; textSize = 12f; setTextColor(Colors.muted); setPadding(0, 0, 0, ui.dp(4)) })
             val plugin = CarPluginRegistry.installed(activity).firstOrNull { it.plugin.id == d.plugin }
-            row(tr("Plugin"), plugin?.plugin?.label ?: tr("{0} (not installed)", d.plugin))
+            row(tr("Plugin"), plugin?.let { p -> listOfNotNull(p.plugin.label, versionOf(p.component.packageName)).joinToString(" ") }
+                ?: tr("{0} (not installed)", d.plugin))
             // The plugin has no icon of its own: its screen (state of the car connection) is opened from here
             if (plugin != null) CarPluginRegistry.settingsIntent(activity, plugin)?.let { intent ->
                 form.addView(ui.button(tr("Open {0}", plugin.plugin.label)) {
@@ -79,10 +80,18 @@ class CarInfoDialog(private val activity: Activity, private val ui: Ui, private 
             row(tr("Doors and windows"), if (doors.closed == null) null else doors.text)
             if (snap == null && f.summary.odometerKm == null) form.addView(ui.body().apply { text = tr("No data yet."); textSize = 14f })
         }
+        row(tr("Drivelog"), BuildConfig.VERSION_NAME)
         AlertDialog.Builder(activity)
             .setTitle(tr("Car information"))
             .setView(ScrollView(activity).apply { addView(form) })
             .setPositiveButton(tr("OK"), null)
             .show()
+    }
+
+    /** The version name of an installed app (the plugin), so an old one is easy to spot. */
+    private fun versionOf(packageName: String): String? = try {
+        activity.packageManager.getPackageInfo(packageName, 0).versionName
+    } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
+        null
     }
 }

@@ -40,7 +40,7 @@ masked.
 TCP, port **7777** on the head unit's Wi-Fi address, UTF-8, one JSON object per line. The plugin sends:
 
 ```json
-{"type":"hello","proto":1,"app":"drivelog-bridge-0.1.0 EntryNav2","t":123456,"props":13}
+{"type":"hello","proto":1,"app":"drivelog-bridge-0.2.0 EntryNav2","t":123456,"props":18}
 {"type":"snapshot","t":123457,"values":{"driving.odometer":{"odometer":12345},"sensors.fuel":{"fuel":{"tanklevel":31,"range":420}}}}
 {"type":"cds","t":123512,"name":"sensors.fuel","value":{"fuel":{"tanklevel":30,"range":410}}}
 {"type":"ping","t":128512}

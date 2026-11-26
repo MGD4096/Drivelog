@@ -12,7 +12,7 @@ import java.net.SocketTimeoutException
  * The phone side of the head-unit bridge protocol (headunit/README.md). The plugin in the car listens on TCP port
  * [DEFAULT_PORT] of the car's Wi-Fi and sends one JSON object per line:
  *
- *  - `{"type":"hello","proto":1,"app":"drivelog-bridge-0.1.0 EntryNav2","t":…,"props":13}` first,
+ *  - `{"type":"hello","proto":1,"app":"drivelog-bridge-0.2.0 EntryNav2","t":…,"props":18}` first,
  *  - `{"type":"snapshot","t":…,"values":{"<property>":{…},…}}` the latest value of every property it has,
  *  - `{"type":"cds","t":…,"name":"<property>","value":{…}}` each change, exactly the JSON the car gave,
  *  - `{"type":"ping","t":…}` after 5 s without anything else,
@@ -185,7 +185,7 @@ class BridgeClient(
                 }
             }
         } catch (e: SocketTimeoutException) {
-            if (running) { lastError = "nothing from the head unit for ${silenceMs / 1000} s"; log(lastError!!) }
+            if (running) { val why = "nothing from the head unit for ${silenceMs / 1000} s"; lastError = why; log(why) }
         } catch (e: IOException) {
             if (running) { lastError = e.message ?: e.javaClass.simpleName; log("connection ended: $lastError") }
         }

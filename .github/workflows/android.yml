@@ -7,22 +7,45 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
-
+  # Both apps: every JVM unit test and the debug APKs (AGENTS.md, "Commands").
+  apps:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
-    - name: set up JDK 17
+      with:
+        fetch-depth: 0            # the version is the number of commits (build.gradle)
+    - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: '21'
         distribution: 'temurin'
         cache: gradle
-
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-    - name: Build with Gradle
-      run: ./gradlew build
-    - name: Run tests
-      run: ./gradlew test
+    - name: Unit tests
+      run: ./gradlew :car-api:test :core:test :plugins:id6:testDebugUnitTest
+    - name: Build both APKs
+      run: ./gradlew :app:assembleDebug :plugins:id6:assembleDebug
+
+  # The head-unit plugin, built with the EntryNav2 compiler and run under qemu against the fake framework.
+  # None of the car's libraries is needed for this.
+  headunit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build the toolchain images
+      run: |
+        docker build -t drivelog-entrynav2-tc headunit/toolchain
+        docker build -t drivelog-runner -f headunit/toolchain/Dockerfile.runner headunit/toolchain
+    - name: Host test
+      run: bash headunit/toolchain/check.sh
+
+  # Scripts that run on the head unit or in Docker break with a CR in them (.gitattributes).
+  line-endings:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: No CRLF in shell scripts, Python and Makefiles (as stored in git)
+      run: |
+        bad=$(git ls-files --eol -- '*.sh' '*.py' '*Makefile' | grep -v -E '^i/(lf|none) ' || true)
+        if [ -n "$bad" ]; then echo "CRLF line endings in:"; echo "$bad"; exit 1; fi

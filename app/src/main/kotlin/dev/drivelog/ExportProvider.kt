@@ -18,7 +18,7 @@ class ExportProvider : ContentProvider() {
 
     override fun onCreate(): Boolean = true
 
-    private fun exportsDir(): File = File(context!!.cacheDir, EXPORT_DIR)
+    private fun exportsDir(): File = File((context ?: error("ExportProvider used before onCreate")).cacheDir, EXPORT_DIR)
 
     private fun fileFor(uri: Uri): File? {
         val name = uri.lastPathSegment ?: return null

@@ -2,14 +2,11 @@ package dev.drivelog
 
 import android.app.Activity
 import android.app.AlertDialog
-import android.content.Intent
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
-import android.net.Uri
 import android.text.TextUtils
 import android.text.TextPaint
-import android.widget.Toast
 import dev.drivelog.core.MileageLog
 import dev.drivelog.core.tr
 import java.io.File
@@ -62,7 +59,7 @@ class MileageExport(private val activity: Activity, private val ui: Ui, private 
 
     private fun export(car: CarRef, period: Period, filter: MileageLog.Filter, pdf: Boolean) {
         io.execute {
-            var uri: Uri? = null
+            var file: File? = null
             var empty = false
             try {
                 val trips = stores.requireTrips().list()
@@ -71,28 +68,21 @@ class MileageExport(private val activity: Activity, private val ui: Ui, private 
                 empty = log.entries.isEmpty()
                 if (!empty) {
                     val name = d.model ?: car.name
-                    val dir = File(activity.cacheDir, ExportProvider.EXPORT_DIR).apply { mkdirs() }
-                    dir.listFiles()?.forEach { it.delete() }
                     val base = "mileage-log-${period.from}-${period.to}".replace(Regex("[^A-Za-z0-9_-]"), "")
-                    val file = File(dir, if (pdf) "$base.pdf" else "$base.csv")
-                    if (pdf) writePdf(file, log, name, d.plate) else file.writeText("﻿" + MileageLog.csv(log, name, d.plate))
-                    uri = Uri.parse("content://${activity.packageName}.exports/${file.name}")
+                    val f = SharedFiles.newFile(activity, if (pdf) "$base.pdf" else "$base.csv")
+                    if (pdf) writePdf(f, log, name, d.plate) else f.writeText("﻿" + MileageLog.csv(log, name, d.plate))
+                    file = f
                 }
             } catch (e: IOException) {
-                uri = null
+                file = null
             }
             activity.runOnUiThread {
                 if (activity.isDestroyed) return@runOnUiThread
+                val ready = file
                 when {
-                    empty -> Toast.makeText(activity, tr("No trips of this car in that period."), Toast.LENGTH_LONG).show()
-                    uri == null -> Toast.makeText(activity, tr("Could not prepare the file."), Toast.LENGTH_LONG).show()
-                    else -> {
-                        val send = Intent(Intent.ACTION_SEND)
-                            .setType(if (pdf) "application/pdf" else "text/csv")
-                            .putExtra(Intent.EXTRA_STREAM, uri)
-                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        activity.startActivity(Intent.createChooser(send, tr("Share the mileage log")))
-                    }
+                    empty -> ui.toast(tr("No trips of this car in that period."))
+                    ready == null -> ui.toast(tr("Could not prepare the file."))
+                    else -> SharedFiles.send(activity, ready, if (pdf) "application/pdf" else "text/csv", tr("Share the mileage log"))
                 }
             }
         }
@@ -128,7 +118,7 @@ class MileageExport(private val activity: Activity, private val ui: Ui, private 
             y += rowH
             canvas.drawLine(margin, y, width - margin, y, line)
         }
-        fun newPage() {
+        fun newPage(): PdfDocument.Page {
             page?.let { doc.finishPage(it) }
             pageNo++
             val p = doc.startPage(PdfDocument.PageInfo.Builder(width, height, pageNo).create())
@@ -153,11 +143,12 @@ class MileageExport(private val activity: Activity, private val ui: Ui, private 
                 y += 8f
             }
             header(c)
+            return p
         }
-        newPage()
+        var current = newPage()
         for (e in log.entries) {
-            if (y + rowH > height - margin - 50f) newPage()
-            val c = page!!.canvas
+            if (y + rowH > height - margin - 50f) current = newPage()
+            val c = current.canvas
             val values = listOf(
                 e.number.toString(), ui.date(e.date), e.kind.label, e.purpose ?: "", e.route ?: "",
                 e.startOdometerKm?.let { ui.km(it) } ?: "", e.endOdometerKm?.let { ui.km(it) } ?: "", ui.f1(e.km), e.driver ?: "",
@@ -171,14 +162,14 @@ class MileageExport(private val activity: Activity, private val ui: Ui, private 
             y += rowH
             c.drawLine(margin, y, width - margin, y, line)
         }
-        val c = page!!.canvas
+        val c = current.canvas
         y += 8f
         for ((k, v) in listOf(tr("Total (km)") to log.totalKm, tr("Business (km)") to log.businessKm, tr("Private (km)") to log.privateKm)) {
             c.drawText("$k: ", margin, y + 10f, bold)
             c.drawText(ui.f1(v), margin + bold.measureText("$k: "), y + 10f, text)
             y += 13f
         }
-        page?.let { doc.finishPage(it) }
+        doc.finishPage(current)
         try {
             file.outputStream().use { doc.writeTo(it) }
         } finally {

@@ -55,12 +55,13 @@ object ReminderCheck {
     }
 }
 
-/** Runs [ReminderCheck] about once a day, also after the phone restarts. */
+/** Runs [ReminderCheck] and the weekly [AutoBackup] about once a day, also after the phone restarts. */
 class ReminderJobService : JobService() {
     override fun onStartJob(params: JobParameters): Boolean {
         Thread({
             try {
                 ReminderCheck.run(applicationContext)
+                AutoBackup.runIfDue(applicationContext)
             } finally {
                 jobFinished(params, false)
             }

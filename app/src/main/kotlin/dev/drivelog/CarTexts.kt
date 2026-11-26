@@ -62,8 +62,7 @@ object CarTexts {
             days != null && km != null -> days to km
             days != null -> days to (due.dueDate?.let { ui.date(it) } ?: "")
             km != null -> km to (due.nextAtKm?.let { tr("at {0} km", ui.km(it)) } ?: "")
-            due.nextAtKm != null -> tr("at {0} km", ui.km(due.nextAtKm!!)) to tr("odometer unknown")
-            else -> "—" to ""
+            else -> due.nextAtKm?.let { tr("at {0} km", ui.km(it)) to tr("odometer unknown") } ?: ("—" to "")
         }
     }
 

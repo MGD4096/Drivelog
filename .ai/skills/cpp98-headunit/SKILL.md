@@ -8,9 +8,25 @@ description: Writing or changing the C++98 head-unit plugin DrivelogBridge (head
 `libDrivelogBridge.so` is loaded **into the car's HMI process**. A crash, a deadlock or a blocked thread takes down
 the screen, radio and navigation. Every rule below exists because of that.
 
-Files: `src/drivelog_bridge.cpp` (framework glue, threads, sockets, logging), `src/bridge_core.hpp` (pure logic:
-property list `kProperties`, JSON lines, config parsing; host-testable), `tests/host_test.cpp` +
-`tests/fake_framework.*` (the plugin run under qemu against a fake framework), `make_db.py` (texts/images zips).
+Files: one translation unit, so `build_nbt.bat` and the Makefile compile a single `src/drivelog_bridge.cpp`, which
+includes the parts:
+
+| File | Job |
+|---|---|
+| `bridge_core.hpp` | pure logic: property list `kProperties`, JSON lines, config, address maths (host-testable) |
+| `bridge_framework.hpp` | the hand-written `bmw::` declarations, `StandInRunnable` |
+| `bridge_platform.hpp` | paths, time, files, USB sticks, `ScopedLock` |
+| `bridge_log.hpp` | `blog()`: bridge.log, USB copy, slog |
+| `bridge_guard.hpp` | `CrashGuard` |
+| `bridge_values.hpp` | `ValueStore`, `NetworkStatus`: all the HMI and network threads share |
+| `bridge_clients.hpp` | `Clients` (connected phones); the interfaces `PollSource` and `ConnectionSink` |
+| `bridge_listener.hpp` | `Listener`: the socket on the Wi-Fi address |
+| `bridge_caller.hpp` | `PhoneCaller`: calls the phones while none is connected |
+| `bridge_network.hpp` | `WakePipe`, `Network`: the thread that runs the parts above |
+| `drivelog_bridge.cpp` | CDS callbacks, the screen, the app object, the exported `pluginAppInfo` |
+
+Each header wraps its code in an anonymous namespace and is included once. `tests/host_test.cpp` +
+`tests/fake_framework.*` run the plugin under qemu against a fake framework; `make_db.py` makes the texts/images zips.
 
 ## Hard limits
 
@@ -76,25 +92,25 @@ property list `kProperties`, JSON lines, config parsing; host-testable), `tests/
 
 ### SOLID within C++98 (where it fits)
 
-The plugin is one translation unit plus a header, and simplicity beats abstraction inside the car's HMI. Apply
-SOLID to keep parts testable, not to build class hierarchies.
+Simplicity beats abstraction inside the car's HMI. Apply SOLID to keep parts small and testable, not to build class
+hierarchies.
 
-- **S - single responsibility.** Keep separate parts apart, as functions or small classes with one job each:
-  framework glue (CDS callbacks, `PluginApp`), the value queue, the network loop (server and callbacks to the phone),
-  config, logging, and the pure formatting/parsing in `bridge_core.hpp`. A CDS callback only stores the value; it
-  does not format JSON or touch sockets.
+- **S - single responsibility.** One header, one job (the table above). A CDS callback only stores the value in
+  `ValueStore`; it does not format JSON or touch sockets. Shared state lives only in `bridge_values.hpp`, each class
+  behind its own lock.
 - **O - open/closed.** Driven by tables: a new property is a new line in `kProperties` (and its stub), not new
-  code paths. Keep it that way for other lists (USB roots, disable files, text ids).
+  code paths. Keep it that way for other lists (USB roots, disable files, text ids). The network loop goes over a
+  list of `PollSource`s: a new kind of socket is a new source, and the loop does not change.
 - **L - Liskov substitution.** If you derive from a framework class, the derived class must behave as the HMI expects
   from the base (same calling thread, no blocking, no throwing). Prefer composition over inheritance from framework
   types; inherit only where the framework requires it.
 - **I - interface segregation.** Functions take the few values they need (`const char*` and a size, an `int fd`),
   not the global state struct. Headers expose only what the other file uses.
-- **D - dependency inversion.** The core logic depends on small seams, not on the framework or the OS: time,
-  socket operations and the framework entry points go through a thin layer that the host test replaces
-  (`tests/fake_framework.*`). In C++98 that is a struct of function pointers or an abstract class with virtual
-  functions and a protected destructor. Use it only where a test needs it; virtual calls in callbacks are fine, heap
-  allocation is not.
+- **D - dependency inversion.** Parts depend on small interfaces, not on each other: `Listener` and `PhoneCaller`
+  hand a new connection to a `ConnectionSink` (implemented by `Clients`), and the network loop knows only
+  `PollSource`. In C++98 an interface is an abstract class with pure virtual functions and a protected non-virtual
+  destructor. Virtual calls are fine; heap allocation in callbacks is not. Don't use `__sync`/atomic builtins (QNX's
+  GCC 4.4 is not checked): a flag shared between threads gets a mutex.
 
 ### Files
 - `*.sh`, `*.py`, `Makefile` use LF; `*.bat`, `*.ps1` use CRLF (`.gitattributes`). A CR breaks scripts on the head

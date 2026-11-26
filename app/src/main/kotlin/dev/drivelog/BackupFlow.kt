@@ -43,11 +43,42 @@ class BackupFlow(private val activity: Activity, private val ui: Ui, private val
         }
     }
 
+    /** Opens the folder picker for the weekly automatic backup ([AutoBackup]). */
+    fun chooseAutoFolder() {
+        try {
+            @Suppress("DEPRECATION")
+            activity.startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQ_FOLDER)
+        } catch (e: ActivityNotFoundException) {
+            ui.toast(tr("No app found to pick a folder."))
+        }
+    }
+
+    /** The automatic backup now, whatever the date of the last one. */
+    fun autoBackupNow() {
+        io.execute {
+            AutoBackup.runIfDue(activity, force = true)
+            activity.runOnUiThread {
+                if (activity.isDestroyed) return@runOnUiThread
+                val error = AppSettings.autoBackupError(activity)
+                ui.toast(if (error == null) tr("Backup written.") else tr("Could not back up: {0}", error))
+            }
+        }
+    }
+
     /** True when the result was one of the file pickers' (and is handled here). */
     fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
-        if (requestCode != REQ_EXPORT && requestCode != REQ_IMPORT) return false
+        if (requestCode != REQ_EXPORT && requestCode != REQ_IMPORT && requestCode != REQ_FOLDER) return false
         val uri = data?.data ?: return true
         if (resultCode != Activity.RESULT_OK) return true
+        if (requestCode == REQ_FOLDER) {
+            try {
+                AutoBackup.choose(activity, uri)
+                autoBackupNow()                                     // the first one at once: shows that it works
+            } catch (e: SecurityException) {
+                ui.toast(tr("Could not back up: {0}", e.message))
+            }
+            return true
+        }
         if (requestCode == REQ_EXPORT) {
             exportTo(uri)
         } else {
@@ -103,5 +134,6 @@ class BackupFlow(private val activity: Activity, private val ui: Ui, private val
     private companion object {
         const val REQ_EXPORT = 3
         const val REQ_IMPORT = 4
+        const val REQ_FOLDER = 5
     }
 }

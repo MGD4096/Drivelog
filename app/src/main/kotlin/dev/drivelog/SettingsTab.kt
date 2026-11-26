@@ -8,6 +8,9 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
+import android.net.Uri
+import android.provider.DocumentsContract
+import dev.drivelog.core.BackupRotation
 import dev.drivelog.core.Lang
 import dev.drivelog.core.tr
 import dev.drivelog.core.trn
@@ -29,6 +32,8 @@ class SettingsTab(
     private val tripText: TextView = ui.body()
     private val languageButton: TextView = ui.pill("") { chooseLanguage() }
     private val themeButton: TextView = ui.pill("") { chooseTheme() }
+    private val autoBackupButton: TextView = ui.pill("") { autoBackupMenu() }
+    private val autoBackupText: TextView = ui.body().apply { textSize = 13f; setTextColor(Colors.muted); setPadding(0, ui.dp(6), 0, ui.dp(4)) }
     private lateinit var remindersSwitch: Switch
     private lateinit var daysButton: TextView
     private lateinit var kmButton: TextView
@@ -51,7 +56,8 @@ class SettingsTab(
         addView(permissions.view)
         addView(ui.heading(tr("About")))
         addView(ui.body().apply {
-            text = tr("Drivelog records your trips and the data the car reports through the iDrive Plus head-unit plugin.\nMap data © OpenStreetMap contributors.")
+            text = tr("Drivelog records your trips and the data the car reports through the iDrive Plus head-unit plugin.\nMap data © OpenStreetMap contributors.") +
+                "\n" + tr("Version {0}", BuildConfig.VERSION_NAME)
             setTextColor(Colors.muted)
         })
     })
@@ -176,11 +182,53 @@ class SettingsTab(
             setPadding(0, 0, 0, ui.dp(8))
         })
         addView(ui.twoButtons(ui.pill(tr("Export all data")) { backup.startExport() }, ui.pill(tr("Import data")) { backup.startImport() }))
+        addView(autoBackupButton, below())
+        addView(autoBackupText)
+    }
+
+    // ---- automatic backup ---------------------------------------------------------------------------------------------
+
+    private fun autoBackupMenu() {
+        val on = AppSettings.autoBackupFolder(activity) != null
+        val items = if (on) listOf(tr("Back up now"), tr("Choose another folder"), tr("Turn off")) else listOf(tr("Choose a folder"))
+        AlertDialog.Builder(activity)
+            .setTitle(tr("Automatic backup"))
+            .setMessage(tr("Once a week all data goes into a folder you choose (on the phone, an SD card or a cloud drive's folder). The newest {0} are kept.", BackupRotation.KEEP))
+            .setPositiveButton(items[0]) { _, _ -> if (on) backup.autoBackupNow() else backup.chooseAutoFolder() }
+            .apply {
+                if (on) {
+                    setNeutralButton(items[1]) { _, _ -> backup.chooseAutoFolder() }
+                    setNegativeButton(items[2]) { _, _ -> AutoBackup.turnOff(activity); refreshChoices() }
+                }
+            }
+            .show()
+    }
+
+    private fun refreshAutoBackup() {
+        val folder = AppSettings.autoBackupFolder(activity)
+        autoBackupButton.text = if (folder == null) tr("Automatic backup: off") + "   ▾" else tr("Automatic backup: weekly to {0}", folderName(folder)) + "   ▾"
+        val last = AppSettings.autoBackupLast(activity)
+        val error = AppSettings.autoBackupError(activity)
+        autoBackupText.text = when {
+            folder == null -> tr("Turn it on so a lost phone does not take the trips with it.")
+            error != null -> tr("The last try failed: {0}", error)
+            last > 0 -> tr("Last backup: {0}", ui.dateTime(last))
+            else -> tr("No backup yet.")
+        }
+        autoBackupText.setTextColor(if (folder != null && error != null) Colors.warn else Colors.muted)
+    }
+
+    /** "Documents/Drivelog" out of a folder's document URI. */
+    private fun folderName(uri: String): String = try {
+        DocumentsContract.getTreeDocumentId(Uri.parse(uri)).substringAfter(':').ifEmpty { tr("the chosen folder") }
+    } catch (e: IllegalArgumentException) {
+        tr("the chosen folder")
     }
 
     // ---- choices ------------------------------------------------------------------------------------------------------
 
     private fun refreshChoices() {
+        refreshAutoBackup()
         themeButton.text = themeName(AppSettings.theme(activity)) + "   ▾"
         languageButton.text = languageName(AppSettings.language(activity)) + "   ▾"
         val r = AppSettings.reminders(activity)
