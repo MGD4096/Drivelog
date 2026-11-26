@@ -1,16 +1,16 @@
 package dev.drivelog
 
 import android.content.Context
-import dev.drivelog.core.CarDetailsStore
-import dev.drivelog.core.CarEventsStore
-import dev.drivelog.core.FileCarDetailsStore
-import dev.drivelog.core.FileCarEventsStore
-import dev.drivelog.core.FileFuelStore
-import dev.drivelog.core.FileLastReadingStore
-import dev.drivelog.core.FileTripStore
-import dev.drivelog.core.FuelStore
-import dev.drivelog.core.LastReadingStore
-import dev.drivelog.core.TripStore
+import dev.drivelog.core.car.FileCarDetailsStore
+import dev.drivelog.core.car.FileCarEventsStore
+import dev.drivelog.core.car.FileFuelStore
+import dev.drivelog.core.car.FileLastReadingStore
+import dev.drivelog.core.storage.CarDetailsStore
+import dev.drivelog.core.storage.CarEventsStore
+import dev.drivelog.core.storage.FuelStore
+import dev.drivelog.core.storage.LastReadingStore
+import dev.drivelog.core.storage.TripStore
+import dev.drivelog.core.trip.FileTripStore
 import java.io.File
 import java.io.IOException
 

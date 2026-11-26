@@ -1,6 +1,11 @@
 package dev.drivelog.core
 
 import dev.drivelog.carapi.CarValues
+import dev.drivelog.core.storage.AtomicFile
+import dev.drivelog.core.trip.FileTripStore
+import dev.drivelog.core.trip.Trip
+import java.io.File
+import java.nio.file.Files
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -8,8 +13,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
 
 class AtomicFileTest {
     private lateinit var dir: File

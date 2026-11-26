@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The only app the screen reader is shown (ScreenReaderService checks it again): the motorcycle maker's app, which
+     holds the values the motorcycle sent when it disconnected. Its package name is the one place the maker's name has
+     to appear (AGENTS.md, Rules). flagReportViewIds: the values are found by their views' ids, not by their labels.
+     flagIncludeNotImportantViews: the details' tiles (total_mileage_tile ...) are plain, not clickable containers that
+     Android otherwise leaves out of the tree, and with them the ids the values are found by. -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/reader_description"
+    android:packageNames="com.bmw.ConnectedRide"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagReportViewIds|flagIncludeNotImportantViews"
+    android:canRetrieveWindowContent="true"
+    android:notificationTimeout="300" />

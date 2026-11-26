@@ -1,10 +1,17 @@
 package dev.drivelog.core
 
+import dev.drivelog.core.car.CarPart
+import dev.drivelog.core.car.EventType
+import dev.drivelog.core.text.Lang
+import dev.drivelog.core.text.Polish
+import dev.drivelog.core.text.tr
+import dev.drivelog.core.text.trn
+import dev.drivelog.core.trip.TripKind
+import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class LangTest {
     @After

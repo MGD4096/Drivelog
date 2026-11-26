@@ -1,5 +1,12 @@
 package dev.drivelog.core
 
+import dev.drivelog.core.car.CarSnapshot
+import dev.drivelog.core.trip.CarSample
+import dev.drivelog.core.trip.TrackPoint
+import dev.drivelog.core.trip.Trip
+import dev.drivelog.core.trip.TripIds
+import dev.drivelog.core.trip.TripRecorder
+import dev.drivelog.core.trip.TripStats
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

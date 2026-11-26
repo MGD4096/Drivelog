@@ -1,5 +1,20 @@
 package dev.drivelog.core
 
+import dev.drivelog.core.car.CarDetails
+import dev.drivelog.core.car.CarInput
+import dev.drivelog.core.car.CarOrder
+import dev.drivelog.core.car.CarPart
+import dev.drivelog.core.car.CarPlugin
+import dev.drivelog.core.car.CarPlugins
+import dev.drivelog.core.car.FileCarDetailsStore
+import dev.drivelog.core.car.Silhouette
+import dev.drivelog.core.car.VehicleKind
+import dev.drivelog.core.car.VehicleSummary
+import dev.drivelog.core.car.Vin
+import dev.drivelog.core.trip.TripMeta
+import dev.drivelog.core.trip.TripSummary
+import java.io.File
+import java.nio.file.Files
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -8,8 +23,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
 
 class VinTest {
     @Test
@@ -157,6 +170,18 @@ class CarDetailsStoreTest {
         store.put("AA:BB", full)
         assertEquals(full, FileCarDetailsStore(File(dir, "sub/cars.json")).get("AA:BB"))
         assertEquals("address case does not matter", full, store.get("aa:bb"))
+    }
+
+    @Test
+    fun aMotorcycleStaysOneAndOlderFilesAreCars() {
+        val store = FileCarDetailsStore(File(dir, "cars.json"))
+        store.put("AA:01", full.copy(kind = VehicleKind.MOTORCYCLE))
+        assertEquals(VehicleKind.MOTORCYCLE, FileCarDetailsStore(File(dir, "cars.json")).get("AA:01").kind)
+        File(dir, "old.json").writeText("""{"bb:02":{"model":"Mini"},"cc:03":{"model":"X","kind":"hovercraft"}}""")
+        val old = FileCarDetailsStore(File(dir, "old.json"))
+        assertEquals(VehicleKind.CAR, old.get("BB:02").kind)
+        assertEquals(VehicleKind.CAR, old.get("CC:03").kind)                  // unknown kind: a car
+        assertTrue(CarDetails(kind = VehicleKind.MOTORCYCLE).let { !it.isEmpty })
     }
 
     @Test

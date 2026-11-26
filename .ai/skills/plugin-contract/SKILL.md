@@ -22,7 +22,11 @@ older other side.
 - Values cross the boundary in the neutral format (km, litres, °C, %, km/h). The plugin converts units (mph → km/h,
   raw counters → litres); Drivelog never sees a car maker's format.
 - `CarValues.checked()` drops values outside their plausible ranges. Give every new field a range and a test.
-- Open parts are labels of `CarValues.PART_LABELS`, and `CarPart` in `core/OpenParts.kt` lists exactly the same.
+- Open parts are labels of `CarValues.PART_LABELS`, and `CarPart` in `core/car/OpenParts.kt` lists exactly the same.
+- Two ways in: live during a trip (Drivelog binds `ICarPlugin`), and after it (`CarPluginContract.ACTION_READING`, a
+  broadcast to Drivelog that only apps holding the plugin permission can send; `PluginReadingReceiver` keeps it as
+  the latest values and, through `core/trip/LateReading.kt`, as the end of the newest trip when the time and the
+  odometer fit). A plugin that only learns the values later (Drivelog Ride) sends its last reading at `start()`.
 
 ## SOLID in the contract
 
@@ -69,7 +73,7 @@ binder as untrusted: check types and ranges, and never crash on a bad `Bundle`.
 
 ```powershell
 $env:JAVA_HOME = "$env:USERPROFILE\.jdks\jbr-21.0.11"
-.\gradlew.bat :car-api:test :core:test :plugins:id6:testDebugUnitTest :app:assembleDebug :plugins:id6:assembleDebug
+.\gradlew.bat :car-api:test :core:test :plugins:id6:testDebugUnitTest :plugins:ride:testDebugUnitTest :app:assembleDebug :plugins:id6:assembleDebug :plugins:ride:assembleDebug
 ```
 
 ```bash

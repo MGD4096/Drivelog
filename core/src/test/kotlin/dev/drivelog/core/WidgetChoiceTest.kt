@@ -1,5 +1,6 @@
 package dev.drivelog.core
 
+import dev.drivelog.core.car.WidgetChoice
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

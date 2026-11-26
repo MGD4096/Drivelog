@@ -66,7 +66,7 @@ ARM compilers run in Docker images (`headunit/toolchain/run.sh`), Java is the JB
 ## Verify
 
 ```powershell
-.\gradlew.bat :car-api:test :core:test :plugins:id6:testDebugUnitTest :app:assembleDebug :plugins:id6:assembleDebug
+.\gradlew.bat :car-api:test :core:test :plugins:id6:testDebugUnitTest :plugins:ride:testDebugUnitTest :app:assembleDebug :plugins:id6:assembleDebug :plugins:ride:assembleDebug
 ```
 
 ```bash

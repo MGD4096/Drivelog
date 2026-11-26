@@ -1,8 +1,9 @@
 package dev.drivelog
 
 import android.content.Context
-import dev.drivelog.core.Lang
-import dev.drivelog.core.ReminderSettings
+import dev.drivelog.core.car.DetectedRefuel
+import dev.drivelog.core.car.ReminderSettings
+import dev.drivelog.core.text.Lang
 
 /** The few things the person can set in the app's settings screen. */
 object AppSettings {
@@ -61,7 +62,7 @@ object AppSettings {
 
     fun setDriver(c: Context, name: String?) = prefs(c).edit().putString(KEY_DRIVER, name?.trim()).apply()
 
-    /** Detected refuellings the person said were not worth an entry ([dev.drivelog.core.DetectedRefuel.key]). */
+    /** Detected refuellings the person said were not worth an entry ([DetectedRefuel.key]). */
     fun dismissedRefuels(c: Context): Set<String> = prefs(c).getStringSet(KEY_DISMISSED_REFUELS, emptySet())?.toSet() ?: emptySet()
 
     fun dismissRefuel(c: Context, key: String) =

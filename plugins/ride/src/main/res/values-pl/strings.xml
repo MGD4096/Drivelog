@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="info_text">Plugin do aplikacji Drivelog. Odczytuje przebieg, paliwo, zasięg i ciśnienie w oponach motocykla z aplikacji producenta na tym telefonie, która dostaje je od motocykla przy rozłączeniu.\n\nJak używać: w ustawieniach ułatwień dostępu Androida włącz „Drivelog Ride”. W Drivelogu otwórz motocykl, wybierz Edytuj i ustaw plugin Drivelog Ride. Po jeździe, przy najbliższym odblokowaniu telefonu, plugin na kilka sekund otwiera aplikację producenta, stuka motocykl, odczytuje szczegóły i wraca na ekran startowy: Drivelog przyjmie wartości jako koniec jazdy. Możesz też sam otworzyć aplikację i stuknąć motocykl.\n\nPlugin czyta tylko ekrany tej aplikacji i tylko wartości motocykla. Stuknięcie motocykla to jedyne, co w niej robi; niczego nie wpisuje.</string>
+    <string name="reader_description">Odczytuje przebieg, paliwo, zasięg i ciśnienie w oponach z ekranów aplikacji motocykla dla Drivelog. Po jeździe otwiera tę aplikację i stuka motocykl, żeby zobaczyć szczegóły. Nie czyta niczego innego i niczego nie wpisuje.</string>
+    <string name="auto_open">Po jeździe otwórz aplikację motocykla i odczytaj ją</string>
+    <string name="read_now">Odczytaj teraz</string>
+    <string name="read_now_failed">Nie da się: włącz odczyt ekranu i sprawdź, czy aplikacja motocykla jest zainstalowana.</string>
+    <string name="open_accessibility">Otwórz ustawienia ułatwień dostępu</string>
+    <string name="no_accessibility_settings">Na tym telefonie nie da się otworzyć ustawień ułatwień dostępu.</string>
+    <string name="tank_label">Pojemność zbiornika w litrach (aplikacja motocykla pokazuje paliwo w %)</string>
+    <string name="tank_hint">np. 16,5</string>
+    <string name="tank_error">Pojemność od 1 do 100 litrów</string>
+    <string name="save">Zapisz</string>
+    <string name="saved">Zapisano.</string>
+    <string name="drivelog_installed">Drivelog: zainstalowany.</string>
+    <string name="drivelog_missing">Drivelog nie jest zainstalowany. Bez niego ten plugin nic nie robi.</string>
+    <string name="reader_on">Odczyt ekranu: włączony.</string>
+    <string name="reader_off">Odczyt ekranu: wyłączony. Włącz „Drivelog Ride” w ustawieniach ułatwień dostępu.</string>
+    <string name="no_reading">Jeszcze nic nie odczytano: otwórz aplikację motocykla i stuknij motocykl.</string>
+    <string name="reading_label">Ostatni odczyt (z chwili, gdy motocykl go wysłał): %1$s</string>
+    <string name="odometer_value">Przebieg: %1$s km</string>
+    <string name="fuel_value">Paliwo: %1$s l</string>
+    <string name="range_value">Zasięg: %1$s km</string>
+    <string name="tyres_value">Opony: %1$s bar</string>
+    <string name="version_label">Wersja %1$s</string>
+</resources>

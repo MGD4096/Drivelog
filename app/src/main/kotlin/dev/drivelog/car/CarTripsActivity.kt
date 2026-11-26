@@ -1,0 +1,106 @@
+package dev.drivelog.car
+
+import android.app.Activity
+import android.graphics.Color
+import android.os.Build
+import android.os.Bundle
+import android.util.TypedValue
+import android.view.Gravity
+import android.view.ViewGroup
+import android.view.WindowInsets
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
+import dev.drivelog.Colors
+import dev.drivelog.Prefs
+import dev.drivelog.Stores
+import dev.drivelog.Ui
+import dev.drivelog.core.storage.TripStore
+import dev.drivelog.core.text.tr
+import dev.drivelog.core.trip.TripMeta
+import dev.drivelog.trips.TripActions
+import java.util.concurrent.Executors
+
+/** The trips of one car, newest first. */
+class CarTripsActivity : Activity() {
+    private val stores by lazy { Stores(this) }
+
+    private val io = Executors.newSingleThreadExecutor()
+    private lateinit var ui: Ui
+    private lateinit var actions: TripActions
+    private lateinit var address: String
+    private lateinit var summary: TextView
+    private lateinit var box: LinearLayout
+    private lateinit var heading: TextView
+    private var store: TripStore? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        Colors.prepare(this)
+        super.onCreate(savedInstanceState)
+        ui = Ui(this)
+        address = intent.getStringExtra(CarActivity.EXTRA_ADDRESS) ?: run { finish(); return }
+        val car = Prefs.cars(this).firstOrNull { it.address.equals(address, true) }
+        store = stores.trips
+        actions = TripActions(this, ui, store, io) { load() }
+
+        heading = ui.title(car?.let { c -> stores.carName(c.address, c.name) } ?: tr("Trips"))
+        summary = ui.body().apply { setTextColor(Colors.muted); setPadding(0, ui.dp(4), 0, ui.dp(8)) }
+        box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(ui.dp(16), ui.dp(8), ui.dp(16), ui.dp(24))
+            addView(LinearLayout(this@CarTripsActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                addView(ui.button("‹") { finish() }.apply { contentDescription = tr("Back"); minWidth = 0; minimumWidth = 0 },
+                    LinearLayout.LayoutParams(ui.dp(52), ViewGroup.LayoutParams.WRAP_CONTENT))
+                addView(heading, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = ui.dp(8) })
+            })
+            addView(summary)
+            addView(box)
+        }
+        setContentView(ScrollView(this).apply {
+            addView(content, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            setOnApplyWindowInsetsListener { v, insets ->
+                if (Build.VERSION.SDK_INT >= 30) {
+                    val bars = insets.getInsets(WindowInsets.Type.systemBars())
+                    v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+                }
+                insets
+            }
+        })
+    }
+
+    override fun onResume() {
+        super.onResume()
+        load()
+    }
+
+    override fun onDestroy() {
+        io.shutdown()
+        super.onDestroy()
+    }
+
+    private fun load() {
+        val s = store ?: return
+        io.execute {
+            val mine = s.list().filter { it.carId.equals(address, ignoreCase = true) }          // already newest first
+            runOnUiThread { if (!isDestroyed) show(mine) }
+        }
+    }
+
+    private fun show(list: List<TripMeta>) {
+        box.removeAllViews()
+        if (list.isEmpty()) {
+            summary.text = tr("No trips recorded for this car yet.")
+            summary.visibility = android.view.View.VISIBLE
+            return
+        }
+        summary.text = ""
+        summary.visibility = android.view.View.GONE
+        box.addView(actions.summaryTiles(list))
+        val listBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        actions.fill(listBox, list, showCar = false)
+        box.addView(listBox)
+    }
+}

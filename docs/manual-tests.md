@@ -61,6 +61,9 @@ Legend: **[phone]** needs only the phone, **[car]** needs the car (or its head u
 - [ ] [phone] Two widgets for two cars show their own cars; tapping opens that car's page.
 - [ ] [phone] Dark mode: the widget's colours follow the phone.
 - [ ] [car] During a trip it says "live" and updates.
+- [ ] [phone] The "Drivelog: vehicles" widget asks which vehicles (up to 3, more are refused); a tile each, side by side, with its
+      picture (a motorcycle its drawing), fuel, range, 12 V and Closed/Open, the time; tapping a tile opens that vehicle.
+- [ ] [phone] Both widgets update together after a trip or a reading from the motorcycle plugin.
 
 ## 6. Settings and data
 
@@ -76,6 +79,23 @@ Legend: **[phone]** needs only the phone, **[car]** needs the car (or its head u
 
 - [ ] [phone] Opened from the car's ⓘ → "Open Drivelog ID6": shows the state and how it tries to reach the head unit.
 - [ ] [phone] A plugin signed with another key, or without the permission, is not offered in "Edit car".
+
+## 7a. Drivelog Ride (motorcycle)
+
+- [ ] [phone] Edit car → "Motorcycle": the car page shows the motorcycle drawing with the tyre pressures instead of
+      the doors card; the widget shows the drawing too. Back to "Car": the doors card returns.
+- [ ] [phone] Drivelog → motorcycle → ⓘ → "Open Drivelog Ride": "Screen reader: off"; the button opens the
+      accessibility settings; after turning "Drivelog Ride" on, the screen says "on". Enter the tank size and save.
+- [ ] [phone] Open the motorcycle app: the plugin's screen shows fuel and range; tap the motorcycle: also the odometer
+      (and the tyres when the app shows them). The time is the app's "Updated …", not now.
+- [ ] [phone] Drivelog's car page and widget show the same values; ⓘ shows the tyre pressures.
+- [ ] [ride] A ride with the phone: at the start the trip gets the last reading (odometer before the ride); after the
+      ride, open the motorcycle app and tap the motorcycle: the trip's end odometer and fuel change to the new ones.
+- [ ] [phone] Plugin screen → "Read now": the motorcycle app opens, the motorcycle is tapped, the details show and the
+      phone goes back to the home screen within a few seconds; the odometer is in Drivelog.
+- [ ] [ride] After a ride, lock the phone; at the next unlock (within 2 h) the same happens by itself. With the switch
+      off, nothing opens.
+- [ ] [phone] Opening another app with the screen reader on: nothing is read (only the motorcycle app is).
 
 ## 8. Head unit
 

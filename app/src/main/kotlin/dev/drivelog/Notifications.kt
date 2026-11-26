@@ -1,6 +1,5 @@
 package dev.drivelog
 
-import dev.drivelog.core.tr
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -9,6 +8,11 @@ import android.bluetooth.BluetoothDevice
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import dev.drivelog.car.CarActivity
+import dev.drivelog.core.text.tr
+import dev.drivelog.core.trip.TripKind
+import dev.drivelog.recording.TripKindReceiver
+import dev.drivelog.recording.TripService
 
 /** BluetoothDevice from an ACL broadcast, without the deprecated overload on newer Android. */
 fun bluetoothDeviceFrom(intent: Intent): BluetoothDevice? =
@@ -98,7 +102,7 @@ object Notifications {
      */
     fun tripResult(context: Context, text: String, tripId: String? = null) {
         // trips are private unless marked otherwise, so only "business" needs a button
-        val actions = if (tripId == null) emptyList() else listOf(dev.drivelog.core.TripKind.BUSINESS).map { kind ->
+        val actions = if (tripId == null) emptyList() else listOf(TripKind.BUSINESS).map { kind ->
             val intent = Intent(context, TripKindReceiver::class.java)
                 .putExtra(TripKindReceiver.EXTRA_TRIP, tripId)
                 .putExtra(TripKindReceiver.EXTRA_KIND, kind.name)

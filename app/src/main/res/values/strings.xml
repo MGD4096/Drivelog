@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">Drivelog</string>
+    <!-- The widget picker shows these (CarWidget is labelled app_name). -->
+    <string name="widget_cars_label">Drivelog: vehicles</string>
+    <string name="widget_cars_description">Several vehicles at a glance: fuel, range and whether they are locked</string>
 </resources>

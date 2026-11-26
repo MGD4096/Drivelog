@@ -23,9 +23,9 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Unit tests
-      run: ./gradlew :car-api:test :core:test :plugins:id6:testDebugUnitTest
-    - name: Build both APKs
-      run: ./gradlew :app:assembleDebug :plugins:id6:assembleDebug
+      run: ./gradlew :car-api:test :core:test :plugins:id6:testDebugUnitTest :plugins:ride:testDebugUnitTest
+    - name: Build the three APKs
+      run: ./gradlew :app:assembleDebug :plugins:id6:assembleDebug :plugins:ride:assembleDebug
 
   # The head-unit plugin, built with the EntryNav2 compiler and run under qemu against the fake framework.
   # None of the car's libraries is needed for this.

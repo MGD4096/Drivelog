@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Drivelog Ride</string>
+    <string name="info_text">A plugin for Drivelog. It reads the odometer, fuel, range and tyre pressures of your motorcycle from the maker\'s app on this phone, which gets them from the motorcycle when it disconnects.\n\nHow to use it: in Android\'s accessibility settings, turn on "Drivelog Ride". In Drivelog, open the motorcycle, choose Edit and set the plugin Drivelog Ride. After a ride, the next time you unlock the phone, the plugin opens the maker\'s app for a few seconds, taps the motorcycle for its details, reads them and goes back to the home screen: Drivelog takes the values as the end of the ride. You can also open the app and tap the motorcycle yourself.\n\nThe plugin reads only that app\'s screens, and only the motorcycle\'s values on them. The tap on the motorcycle is the only thing it does there; it never types.</string>
+    <string name="reader_description">Reads the odometer, fuel, range and tyre pressures from the motorcycle app\'s screens for Drivelog. After a ride it opens that app and taps the motorcycle to see its details. It reads nothing else and never types.</string>
+    <string name="auto_open">After a ride, open the motorcycle app and read it</string>
+    <string name="read_now">Read now</string>
+    <string name="read_now_failed">Not possible: turn the screen reader on, and check that the motorcycle app is installed.</string>
+    <string name="open_accessibility">Open accessibility settings</string>
+    <string name="no_accessibility_settings">The accessibility settings cannot be opened on this phone.</string>
+    <string name="tank_label">Tank size, litres (the motorcycle app shows the fuel in %)</string>
+    <string name="tank_hint">e.g. 16.5</string>
+    <string name="tank_error">A size between 1 and 100 litres</string>
+    <string name="save">Save</string>
+    <string name="saved">Saved.</string>
+    <string name="drivelog_installed">Drivelog: installed.</string>
+    <string name="drivelog_missing">Drivelog is not installed. Without it this plugin does nothing.</string>
+    <string name="reader_on">Screen reader: on.</string>
+    <string name="reader_off">Screen reader: off. Turn on "Drivelog Ride" in the accessibility settings.</string>
+    <string name="no_reading">No reading yet: open the motorcycle app and tap the motorcycle.</string>
+    <string name="reading_label">Latest reading (when the motorcycle sent it): %1$s</string>
+    <string name="odometer_value">Odometer: %1$s km</string>
+    <string name="fuel_value">Fuel: %1$s L</string>
+    <string name="range_value">Range: %1$s km</string>
+    <string name="tyres_value">Tyres: %1$s bar</string>
+    <string name="version_label">Version %1$s</string>
+</resources>

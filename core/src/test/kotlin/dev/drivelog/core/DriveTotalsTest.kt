@@ -1,6 +1,14 @@
 package dev.drivelog.core
 
 import dev.drivelog.carapi.CarValues
+import dev.drivelog.core.car.CarState
+import dev.drivelog.core.car.DriveTotals
+import dev.drivelog.core.trip.CounterFuel
+import dev.drivelog.core.trip.TrackPoint
+import dev.drivelog.core.trip.Trip
+import dev.drivelog.core.trip.TripMeta
+import dev.drivelog.core.trip.TripStats
+import dev.drivelog.core.trip.TripSummary
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

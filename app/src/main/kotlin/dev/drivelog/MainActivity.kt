@@ -15,8 +15,18 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import dev.drivelog.core.LastKnownCar
-import dev.drivelog.core.tr
+import dev.drivelog.backup.AutoBackup
+import dev.drivelog.backup.BackupFlow
+import dev.drivelog.core.car.LastKnownCar
+import dev.drivelog.core.text.tr
+import dev.drivelog.main.CarsScreen
+import dev.drivelog.main.PermissionsPanel
+import dev.drivelog.main.SettingsTab
+import dev.drivelog.main.TripStarter
+import dev.drivelog.main.TripsTab
+import dev.drivelog.reminders.ReminderCheck
+import dev.drivelog.reminders.ReminderScheduler
+import dev.drivelog.trips.TripActions
 import java.util.Locale
 import java.util.concurrent.Executors
 

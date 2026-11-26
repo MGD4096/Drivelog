@@ -1,10 +1,11 @@
 package dev.drivelog.core
 
+import dev.drivelog.core.storage.BackupRotation
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 class BackupRotationTest {
     private val day = 86_400_000L

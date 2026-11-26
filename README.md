@@ -49,7 +49,7 @@ protected by the plugin permission) is offered on the car's page, so the plugin 
   car values on the way.
 * **Trip summary:** distance, duration, moving time, average and top speed, odometer start/end, fuel start/end/used,
   refuelling during the trip, consumption in L/100 km, and the car's own average.
-* **Languages.** English and Polish (*Settings > Language*: phone language, English or Polski). All texts go through `tr("English text")` in `core/Lang.kt`; Polish is in `core/Polish.kt`, and a test fails when a text has no translation.
+* **Languages.** English and Polish (*Settings > Language*: phone language, English or Polski). All texts go through `tr("English text")` in `core/text/Lang.kt`; Polish is in `core/text/Polish.kt`, and a test fails when a text has no translation.
 * **Dark theme.** *Settings > Theme*: follow the phone, light or dark. Colours come from `Colors.kt` by name, so every screen draws both themes (the map tiles are darkened with a colour filter too).
 * **Backup.** *Settings > Data* exports everything (trips, cars, photos, service log, settings) to one ZIP file and imports it again, for example on a new phone. Importing replaces the current data, and a file that is no backup is refused before anything is touched.
 * **Three tabs.** *Cars*, *Trips* and *Settings* (live status, permissions, reminder settings).
@@ -131,8 +131,8 @@ protected by the plugin permission) is offered on the car's page, so the plugin 
 Android Studio (or JDK 17–21 and the Android SDK, platform 35; Kotlin 1.9 does not run on JDK 25):
 
 ```
-./gradlew :car-api:test :core:test :plugins:id6:testDebugUnitTest   # all unit tests
-./gradlew :app:assembleDebug :plugins:id6:assembleDebug             # Drivelog and Drivelog ID6
+./gradlew :car-api:test :core:test :plugins:id6:testDebugUnitTest :plugins:ride:testDebugUnitTest   # all unit tests
+./gradlew :app:assembleDebug :plugins:id6:assembleDebug :plugins:ride:assembleDebug             # Drivelog, Drivelog ID6 and Drivelog Ride
 bash headunit/toolchain/check.sh                                       # the head-unit part, ARM under qemu (Docker)
 ```
 
@@ -143,6 +143,7 @@ bash headunit/toolchain/check.sh                                       # the hea
 | `core/` | trips, statistics, storage, GPX/CSV, texts: Drivelog's logic, unit-tested | no |
 | `app/` | Drivelog: service, Bluetooth, plugin discovery and binding (`CarPluginLink.kt`), screens | app `dev.drivelog` |
 | `plugins/id6/` | Drivelog ID6: BMW's CDS formats (`Cds.kt`), the head-unit connection (`Bridge.kt`, `CarWifi.kt`), the plugin service | app `dev.drivelog.id6` |
+| `plugins/ride/` | Drivelog Ride: a motorcycle's odometer, fuel, range and tyre pressures, read from the BMW Motorrad Connected app's screens (accessibility service) after the ride | app `dev.drivelog.ride` |
 | `headunit/` | DrivelogBridge, the iDrive plugin inside the head unit (C++) | – |
 
 Versions: AGP 8.7.3, Kotlin 1.9.25, Gradle 8.9. Bump them if Android Studio asks.
@@ -182,7 +183,7 @@ look first at the status line of a running trip (it names the plugin and its sta
   [Open-Meteo](https://open-meteo.com)**, which needs no account or key. It is free for non-commercial use (up to
   10,000 requests a day) and its data is CC BY 4.0, which is why the tile says "Weather data by Open-Meteo.com". A
   reading is reused for 30 minutes and kept on the phone, so it also shows (marked "Offline") for up to 6 hours without
-  a network. If you do not want this, remove the call to `weatherTileHere` in `CarsScreen.kt`.
+  a network. If you do not want this, remove the `WeatherTile(...).here()` tile in `app/.../main/CarsScreen.kt`.
 * No place names (coordinates only), no refuelling log, no cloud sync.
 
 ## Credits and licence

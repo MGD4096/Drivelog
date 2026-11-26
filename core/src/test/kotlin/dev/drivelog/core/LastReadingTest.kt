@@ -1,6 +1,14 @@
 package dev.drivelog.core
 
 import dev.drivelog.carapi.CarValues
+import dev.drivelog.core.car.FileLastReadingStore
+import dev.drivelog.core.car.LastKnownCar
+import dev.drivelog.core.car.LastReading
+import dev.drivelog.core.car.VehicleSummary
+import dev.drivelog.core.trip.TripMeta
+import dev.drivelog.core.trip.TripSummary
+import java.io.File
+import java.nio.file.Files
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -8,8 +16,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
 
 class LastReadingTest {
     private lateinit var dir: File

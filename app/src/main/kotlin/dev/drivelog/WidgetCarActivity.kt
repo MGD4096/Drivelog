@@ -5,7 +5,7 @@ import android.app.AlertDialog
 import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.os.Bundle
-import dev.drivelog.core.tr
+import dev.drivelog.core.text.tr
 
 /**
  * Asks which car a home-screen widget shows, when the widget is placed (and again from the launcher's "Widget

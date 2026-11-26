@@ -1,11 +1,10 @@
 package dev.drivelog
 
-import dev.drivelog.carapi.Json
-
 import android.content.Context
+import dev.drivelog.carapi.Json
+import dev.drivelog.core.car.CarState
+import dev.drivelog.core.trip.TripSummary
 import dev.drivelog.pluginapi.CarPluginContract
-import dev.drivelog.core.CarState
-import dev.drivelog.core.TripSummary
 
 /** A car the user chose from the paired Bluetooth devices. */
 data class CarRef(val address: String, val name: String)

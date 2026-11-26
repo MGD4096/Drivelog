@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CarValuesTest {
-    private val full = CarValues(12345.0, 31.0, 420.0, 14.2, 6.5, 21.0, listOf("driver door", "sunroof (tilted)"), 86.0, false)
+    private val full = CarValues(12345.0, 31.0, 420.0, 14.2, 6.5, 21.0, listOf("driver door", "sunroof (tilted)"), 86.0, false, tyrePressuresBar = listOf(2.5, 2.9))
 
     @Test
     fun plausibleValuesPassUnchanged() {
@@ -30,6 +30,14 @@ class CarValuesTest {
         assertEquals(listOf("driver door", "bonnet (tilted)"), c.openParts)
         assertNull(CarValues(fuelLiters = 0.0).checked().fuelLiters)                 // zero = no reading
         assertNull(CarValues(odometerKm = Double.POSITIVE_INFINITY).checked().odometerKm)
+    }
+
+    @Test
+    fun tyrePressuresOutsideTheRangeAreDroppedTogether() {
+        assertNull(CarValues(tyrePressuresBar = listOf(2.5, 9.0)).checked().tyrePressuresBar)   // one wrong: none trusted
+        assertNull(CarValues(tyrePressuresBar = emptyList()).checked().tyrePressuresBar)
+        assertNull(CarValues(tyrePressuresBar = List(9) { 2.0 }).checked().tyrePressuresBar)
+        assertEquals(listOf(2.2, 2.4), CarValues(tyrePressuresBar = listOf(2.2, 2.4)).checked().tyrePressuresBar)
     }
 
     @Test

@@ -22,11 +22,14 @@ kotlinx.serialization, Moshi, Mockito, AssertJ...).
 ## Project rules that apply here
 
 - No car maker's name in identifiers, packages, comments or texts. Car-specific formats stay in `plugins/id6/Cds.kt`.
-- Every UI string is `tr("English text")` / `trn(...)`, and its Polish text goes into `core/Polish.kt`. Keep `{0}`
+- Every UI string is `tr("English text")` / `trn(...)`, and its Polish text goes into `core/text/Polish.kt`. Keep `{0}`
   placeholders in both. `LangTest` fails otherwise. A string with `\n` is a different key from one without.
 - Renames keep old data readable (e.g. `Backup.OLD_FORMAT`). A stored JSON field that is renamed or removed still
   has to be read; new fields are optional with a default.
-- `CarPart` in `core/OpenParts.kt` lists exactly `CarValues.PART_LABELS` (`CarStateTest`).
+- `CarPart` in `core/car/OpenParts.kt` lists exactly `CarValues.PART_LABELS` (`CarStateTest`).
+- `core` has one package per folder: `trip/`, `car/`, `map/`, `storage/`, `text/` (`dev.drivelog.core.trip`...). A
+  new file goes into the folder of its subject; the package line matches the folder. The tests stay in
+  `dev.drivelog.core` and import what they test.
 
 ## Good practices (follow them in new code even where older code does not)
 
@@ -71,7 +74,7 @@ kotlinx.serialization, Moshi, Mockito, AssertJ...).
 
 ### SOLID (where it pays off)
 
-The stores have small interfaces in `core/Stores.kt` (`TripLoader`, `TripLister`, `TripStore`, `CarDetailsStore`,
+The stores have small interfaces in `core/storage/Stores.kt` (`TripLoader`, `TripLister`, `TripStore`, `CarDetailsStore`,
 `CarEventsStore`, `FuelStore`, `LastReadingStore`, `PerCarData`); the `File...Store` classes implement them. Logic takes
 the narrowest one it needs (`CarHealth.batteryHistory` takes a `TripLoader`). Keep it that way for new code.
 
@@ -109,7 +112,7 @@ data are often the simpler abstraction.
 
 ```powershell
 $env:JAVA_HOME = "$env:USERPROFILE\.jdks\jbr-21.0.11"
-.\gradlew.bat :car-api:test :core:test :plugins:id6:testDebugUnitTest
+.\gradlew.bat :car-api:test :core:test :plugins:id6:testDebugUnitTest :plugins:ride:testDebugUnitTest
 ```
 
 JDK 21, not 25 (Kotlin 1.9.25 crashes on JBR 25).

@@ -1,5 +1,17 @@
 package dev.drivelog.core
 
+import dev.drivelog.core.car.CarSnapshot
+import dev.drivelog.core.trip.Csv
+import dev.drivelog.core.trip.FileTripStore
+import dev.drivelog.core.trip.Gpx
+import dev.drivelog.core.trip.Trip
+import dev.drivelog.core.trip.TripJson
+import dev.drivelog.core.trip.TripRecorder
+import dev.drivelog.core.trip.TripStats
+import java.io.File
+import java.nio.file.Files
+import java.util.Locale
+import javax.xml.parsers.DocumentBuilderFactory
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -8,10 +20,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
-import java.util.Locale
-import javax.xml.parsers.DocumentBuilderFactory
 
 private fun sampleTrip(carId: String = "AA:BB:CC:DD:EE:FF", startSec: Long = 0, name: String = "Mini <John's> & co"): Trip {
     val r = TripRecorder()

@@ -39,6 +39,8 @@ data class CarValues(
      * from 0 when the plugin restarts). Drivelog uses the growth during a trip, never the number itself.
      */
     val fuelUsedTotalL: Double? = null,
+    /** Tyre pressures the vehicle measures, bar: front to rear, left before right (a motorcycle: front, rear). */
+    val tyrePressuresBar: List<Double>? = null,
 ) {
     /**
      * The same values with everything implausible dropped (another app sends them, so they are not trusted): numbers
@@ -57,6 +59,7 @@ data class CarValues(
         speedKmh = speedKmh?.takeIf { !it.isNaN() && it >= 0.0 && it <= 400.0 },
         avgSpeedKmh = avgSpeedKmh.within(0.0, 400.0),
         fuelUsedTotalL = fuelUsedTotalL?.takeIf { !it.isNaN() && !it.isInfinite() && it >= 0.0 && it < 1_000_000.0 },
+        tyrePressuresBar = tyrePressuresBar?.takeIf { p -> p.isNotEmpty() && p.size <= MAX_TYRES && p.all { it >= 0.5 && it <= 6.0 } },
     )
 
     companion object {
@@ -69,6 +72,7 @@ data class CarValues(
             "sunroof", "tailgate", "bonnet",
         )
         const val TILTED = " (tilted)"
+        const val MAX_TYRES = 8
 
         fun isPartLabel(label: String): Boolean = label.removeSuffix(TILTED) in PART_LABELS
 
@@ -84,6 +88,7 @@ data class CarValues(
                 "avgConsumptionKmPerL" to v.avgConsumptionKmPerL, "outsideC" to v.outsideC, "insideC" to v.insideC,
                 "openParts" to v.openParts, "batteryPercent" to v.batteryPercent, "tyrePressureWarning" to v.tyrePressureWarning,
                 "speedKmh" to v.speedKmh, "avgSpeedKmh" to v.avgSpeedKmh, "fuelUsedTotalL" to v.fuelUsedTotalL,
+                "tyrePressuresBar" to v.tyrePressuresBar,
             ).filterValues { it != null }
         )
 
@@ -97,6 +102,7 @@ data class CarValues(
                 openParts = (o["openParts"] as? List<*>)?.filterIsInstance<String>(),
                 batteryPercent = num("batteryPercent"), tyrePressureWarning = o["tyrePressureWarning"] as? Boolean,
                 speedKmh = num("speedKmh"), avgSpeedKmh = num("avgSpeedKmh"), fuelUsedTotalL = num("fuelUsedTotalL"),
+                tyrePressuresBar = (o["tyrePressuresBar"] as? List<*>)?.filterIsInstance<Double>(),
             )
         }
     }
