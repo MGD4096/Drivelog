@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Drivelog Home Assistant</string>
+    <string name="info_text">Sends your vehicles\' state from Drivelog to your Home Assistant: their latest values, where they are parked and the services coming up. Drivelog sends it whenever something changes, at most once a minute; it goes only to the address below.\n\nIn Home Assistant, paste the configuration below into configuration.yaml and restart: the sensors appear by themselves.</string>
+    <string name="url_label">Home Assistant\'s address</string>
+    <string name="webhook_label">Webhook id (hard to guess: whoever knows it can send to it)</string>
+    <string name="send_label">What to send</string>
+    <string name="send_values">Values: odometer, fuel, range, 12 V battery, doors, tyres</string>
+    <string name="send_parking">Where each vehicle is parked (its location)</string>
+    <string name="send_services">Services coming up</string>
+    <string name="save">Save</string>
+    <string name="saved">Saved.</string>
+    <string name="send_now">Send now</string>
+    <string name="sending">Sending…</string>
+    <string name="yaml_label">For Home Assistant (configuration.yaml)</string>
+    <string name="copy_yaml">Copy</string>
+    <string name="copied">Copied.</string>
+    <string name="no_url">Enter Home Assistant\'s address first.</string>
+    <string name="no_state">Nothing from Drivelog yet: use "Send now", or it comes with the next change (a trip, a reading, a service entry).</string>
+    <string name="not_sent">Not sent yet.</string>
+    <string name="sent_ok">Sent %1$s.</string>
+    <string name="sent_error">Could not send (%1$s): %2$s</string>
+</resources>

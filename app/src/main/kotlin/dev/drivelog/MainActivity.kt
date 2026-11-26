@@ -24,6 +24,7 @@ import dev.drivelog.main.PermissionsPanel
 import dev.drivelog.main.SettingsTab
 import dev.drivelog.main.TripStarter
 import dev.drivelog.main.TripsTab
+import dev.drivelog.plugin.Exports
 import dev.drivelog.reminders.ReminderCheck
 import dev.drivelog.reminders.ReminderScheduler
 import dev.drivelog.trips.TripActions
@@ -94,6 +95,7 @@ class MainActivity : Activity() {
         handler.post(refresh)
         ReminderScheduler.ensureScheduled(this)
         io.execute { ReminderCheck.run(this); AutoBackup.runIfDue(this) }
+        Exports.publish(this)                                   // the export plugins get the state on opening too
     }
 
     override fun onPause() {

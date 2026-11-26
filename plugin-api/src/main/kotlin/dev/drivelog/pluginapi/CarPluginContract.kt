@@ -48,6 +48,29 @@ object CarPluginContract {
     const val EXTRA_AT_MS = "dev.drivelog.extra.AT_MS"
     const val DRIVELOG_PACKAGE = "dev.drivelog"
 
+    /**
+     * Export plugins: apps that take Drivelog's data somewhere else (a home server, …). Such a plugin declares a
+     * receiver with this action, protected by [PERMISSION] (so only Drivelog can send to it) and signed like Drivelog;
+     * an activity with [ACTION_SETTINGS] is its screen. Drivelog sends it the state of every vehicle in use whenever
+     * something changes (at most about once a minute): [EXTRA_STATE], JSON text:
+     * ```
+     * {"format":1,"atMs":…,"vehicles":[{"id":"3f2a…","name":"…","kind":"car"|"motorcycle",
+     *   "values":{…CarValues JSON…},"readAtMs":…,            // the latest reading, if any
+     *   "parked":{"lat":…,"lon":…,"atMs":…},                  // where it was left, if known
+     *   "services":[{"type":"inspection"|"insurance"|"oil_change","label":"…","dueDate":"2027-07-15",
+     *                "daysLeft":233,"nextAtKm":…,"kmLeft":…,"level":"ok"|"soon"|"overdue"}]}]}
+     * ```
+     * `id` is stable per vehicle and does not reveal its Bluetooth address. Unknown keys are to be ignored.
+     */
+    const val ACTION_EXPORT = "dev.drivelog.EXPORT"
+    const val EXTRA_STATE = "dev.drivelog.extra.STATE"
+
+    /**
+     * An export plugin asking for the state now (its "Send now"): a broadcast to Drivelog ([DRIVELOG_PACKAGE]), taken
+     * only from apps holding [PERMISSION]. Drivelog answers with [ACTION_EXPORT] at once, without its usual minute.
+     */
+    const val ACTION_EXPORT_REQUEST = "dev.drivelog.EXPORT_REQUEST"
+
     const val STATE_STOPPED = 0
     /** The car (its network, its adapter ...) is not there right now: not an error. */
     const val STATE_NO_CAR = 1

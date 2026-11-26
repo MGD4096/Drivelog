@@ -1,0 +1,42 @@
+// "Drivelog Home Assistant": a separate app that passes Drivelog's vehicle state (CarPluginContract.ACTION_EXPORT)
+// on to a Home Assistant webhook.
+//   ./gradlew :plugins:ha:testDebugUnitTest     the payload and the YAML (plain JVM tests)
+//   ./gradlew :plugins:ha:assembleDebug         the APK
+// Drivelog and this app must be signed with the same key (signature permission): both use the debug key here.
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'dev.drivelog.ha'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "dev.drivelog.ha"
+        minSdk 26
+        targetSdk 35
+        versionCode rootProject.ext.drivelogVersionCode
+        versionName rootProject.ext.drivelogVersionName
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation project(':plugin-api')
+    testImplementation 'junit:junit:4.13.2'
+}

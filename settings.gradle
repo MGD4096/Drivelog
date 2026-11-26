@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = 'drivelog'
-include ':car-api', ':core', ':app', ':plugin-api', ':plugins:id6', ':plugins:ride'
+include ':car-api', ':core', ':app', ':plugin-api', ':plugins:id6', ':plugins:ride', ':plugins:ha'

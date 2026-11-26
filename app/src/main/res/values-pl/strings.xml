@@ -556,6 +556,17 @@
     <string name="t_total_paid">Zapłacono</string>
     <string name="t_total_paid_x">zapłacono ({0})</string>
     <string name="t_which_trips">Które przejazdy?</string>
+    <string name="t_plugins">Pluginy</string>
+    <string name="t_separate_apps_that_add_to_drivelog">Osobne aplikacje, które rozszerzają Drivelog: odczytują wartości pojazdu albo przekazują dane z Drivelog na Twój własny serwer. Używane są tylko pluginy podpisane tak jak Drivelog.</string>
+    <string name="t_installed">Zainstalowany</string>
+    <string name="t_installed_but_signed_with_another_key">Zainstalowany, ale podpisany innym kluczem: Drivelog go nie używa.</string>
+    <string name="t_not_installed">Niezainstalowany</string>
+    <string name="t_download">Pobierz</string>
+    <string name="t_could_not_open_it">Nie udało się otworzyć.</string>
+    <string name="t_no_browser_found">Nie znaleziono przeglądarki.</string>
+    <string name="t_car_values_from_an_nbt_evo_or_entrynav2">Wartości auta z radia NBT Evo lub EntryNav2, przez wtyczkę zainstalowaną w radiu.</string>
+    <string name="t_a_motorcycle_s_values_from_the_maker_s_app">Wartości motocykla z aplikacji producenta na telefonie, odczytywane po każdej jeździe.</string>
+    <string name="t_sends_your_vehicles_values_where_they_are">Wysyła wartości Twoich pojazdów, miejsce parkowania i nadchodzące serwisy do Twojego Home Assistant.</string>
     <plurals name="p_x_days">
         <item quantity="one">{0} dzień</item>
         <item quantity="few">{0} dni</item>

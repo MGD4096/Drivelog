@@ -23,6 +23,11 @@ older other side.
   raw counters → litres); Drivelog never sees a car maker's format.
 - `CarValues.checked()` drops values outside their plausible ranges. Give every new field a range and a test.
 - Open parts are labels of `CarValues.PART_LABELS`, and `CarPart` in `core/car/OpenParts.kt` lists exactly the same.
+- One way out: export plugins (`CarPluginContract.ACTION_EXPORT`), receivers that get the state of all vehicles as
+  JSON (`core/export/ExportState.kt`, format written in the contract) from `app/.../plugin/Exports.kt`, at most once a
+  minute, or at once when a plugin asks (`ACTION_EXPORT_REQUEST`, its "Send now"). New keys in that JSON are fine
+  (plugins ignore unknown ones); raise its `format` only for a change they
+  cannot ignore.
 - Two ways in: live during a trip (Drivelog binds `ICarPlugin`), and after it (`CarPluginContract.ACTION_READING`, a
   broadcast to Drivelog that only apps holding the plugin permission can send; `PluginReadingReceiver` keeps it as
   the latest values and, through `core/trip/LateReading.kt`, as the end of the newest trip when the time and the
@@ -73,7 +78,7 @@ binder as untrusted: check types and ranges, and never crash on a bad `Bundle`.
 
 ```powershell
 $env:JAVA_HOME = "$env:USERPROFILE\.jdks\jbr-21.0.11"
-.\gradlew.bat :car-api:test :core:test :plugins:id6:testDebugUnitTest :plugins:ride:testDebugUnitTest :app:assembleDebug :plugins:id6:assembleDebug :plugins:ride:assembleDebug
+.\gradlew.bat :car-api:test :core:test :plugins:id6:testDebugUnitTest :plugins:ride:testDebugUnitTest :plugins:ha:testDebugUnitTest :app:assembleDebug :plugins:id6:assembleDebug :plugins:ride:assembleDebug :plugins:ha:assembleDebug
 ```
 
 ```bash

@@ -114,7 +114,7 @@ data are often the simpler abstraction.
 
 ```powershell
 $env:JAVA_HOME = "$env:USERPROFILE\.jdks\jbr-21.0.11"
-.\gradlew.bat :car-api:test :core:test :plugins:id6:testDebugUnitTest :plugins:ride:testDebugUnitTest
+.\gradlew.bat :car-api:test :core:test :plugins:id6:testDebugUnitTest :plugins:ride:testDebugUnitTest :plugins:ha:testDebugUnitTest
 ```
 
 JDK 21, not 25 (Kotlin 1.9.25 crashes on JBR 25).

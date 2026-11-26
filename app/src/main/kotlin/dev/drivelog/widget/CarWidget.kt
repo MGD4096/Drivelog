@@ -17,6 +17,7 @@ import android.graphics.RectF
 import android.view.View
 import android.widget.RemoteViews
 import dev.drivelog.car.CarActivity
+import dev.drivelog.plugin.Exports
 import dev.drivelog.core.car.CarHealth
 import dev.drivelog.core.car.OpenPartsText
 import dev.drivelog.core.car.VehicleKind
@@ -90,6 +91,7 @@ class CarWidget : AppWidgetProvider() {
             ParkingWidget.update(context)
             MonthWidget.update(context)
             FuelWidget.update(context)
+            Exports.publish(context)                 // the export plugins (a home server) follow the same changes
         }
 
         /**

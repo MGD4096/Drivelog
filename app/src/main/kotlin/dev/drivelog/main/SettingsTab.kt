@@ -23,6 +23,7 @@ import dev.drivelog.core.storage.BackupRotation
 import dev.drivelog.core.text.Lang
 import dev.drivelog.core.text.tr
 import dev.drivelog.core.text.trn
+import dev.drivelog.plugin.PluginsCard
 import dev.drivelog.pluginapi.CarPluginContract
 import dev.drivelog.recording.TripService
 import dev.drivelog.reminders.ReminderCheck
@@ -40,6 +41,7 @@ class SettingsTab(
     private val backup: BackupFlow,
     private val permissions: PermissionsPanel,
 ) {
+    private val plugins = PluginsCard(activity, ui)
     private val statusText: TextView = ui.body()
     private val tripText: TextView = ui.body()
     private val languageButton: TextView = ui.pill("") { chooseLanguage() }
@@ -64,6 +66,8 @@ class SettingsTab(
         addView(remindersCard())
         addView(ui.heading(tr("Data")))
         addView(dataCard())
+        addView(ui.heading(tr("Plugins")))
+        addView(plugins.view)
         addView(ui.heading(tr("Permissions")))
         addView(permissions.view)
         addView(ui.heading(tr("About")))
@@ -88,6 +92,7 @@ class SettingsTab(
             if (s.gpsProblem != null) append("\n" + tr("No GPS track: {0}", s.gpsProblem))
         }
         permissions.refresh()
+        plugins.refresh()
         refreshChoices()
     }
 

@@ -558,6 +558,17 @@
     <string name="t_total_paid">Total paid</string>
     <string name="t_total_paid_x">total paid ({0})</string>
     <string name="t_which_trips">Which trips?</string>
+    <string name="t_plugins">Plugins</string>
+    <string name="t_separate_apps_that_add_to_drivelog">Separate apps that add to Drivelog: they read a vehicle\'s values, or pass Drivelog\'s data on to your own server. Only plugins signed like Drivelog are used.</string>
+    <string name="t_installed">Installed</string>
+    <string name="t_installed_but_signed_with_another_key">Installed, but signed with another key: Drivelog does not use it.</string>
+    <string name="t_not_installed">Not installed</string>
+    <string name="t_download">Download</string>
+    <string name="t_could_not_open_it">Could not open it.</string>
+    <string name="t_no_browser_found">No browser found.</string>
+    <string name="t_car_values_from_an_nbt_evo_or_entrynav2">Car values from an NBT Evo or EntryNav2 head unit, through its plugin in the head unit.</string>
+    <string name="t_a_motorcycle_s_values_from_the_maker_s_app">A motorcycle\'s values from the maker\'s app on the phone, read after each ride.</string>
+    <string name="t_sends_your_vehicles_values_where_they_are">Sends your vehicles\' values, where they are parked and the services coming up to your Home Assistant.</string>
     <plurals name="p_x_days">
         <item quantity="one">{0} day</item>
         <item quantity="other">{0} days</item>

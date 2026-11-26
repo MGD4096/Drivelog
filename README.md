@@ -131,8 +131,8 @@ protected by the plugin permission) is offered on the car's page, so the plugin 
 Android Studio (or JDK 17–21 and the Android SDK, platform 35; Kotlin 1.9 does not run on JDK 25):
 
 ```
-./gradlew :car-api:test :core:test :plugins:id6:testDebugUnitTest :plugins:ride:testDebugUnitTest   # all unit tests
-./gradlew :app:assembleDebug :plugins:id6:assembleDebug :plugins:ride:assembleDebug             # Drivelog, Drivelog ID6 and Drivelog Ride
+./gradlew :car-api:test :core:test :plugins:id6:testDebugUnitTest :plugins:ride:testDebugUnitTest :plugins:ha:testDebugUnitTest   # all unit tests
+./gradlew :app:assembleDebug :plugins:id6:assembleDebug :plugins:ride:assembleDebug :plugins:ha:assembleDebug             # Drivelog and its plugins
 bash headunit/toolchain/check.sh                                       # the head-unit part, ARM under qemu (Docker)
 ```
 
@@ -144,6 +144,7 @@ bash headunit/toolchain/check.sh                                       # the hea
 | `app/` | Drivelog: service, Bluetooth, plugin discovery and binding (`CarPluginLink.kt`), screens | app `dev.drivelog` |
 | `plugins/id6/` | Drivelog ID6: BMW's CDS formats (`Cds.kt`), the head-unit connection (`Bridge.kt`, `CarWifi.kt`), the plugin service | app `dev.drivelog.id6` |
 | `plugins/ride/` | Drivelog Ride: a motorcycle's odometer, fuel, range and tyre pressures, read from the BMW Motorrad Connected app's screens (accessibility service) after the ride | app `dev.drivelog.ride` |
+| `plugins/ha/` | Drivelog Home Assistant: sends the vehicles' values, parking places and services due to a Home Assistant webhook (an export plugin), and writes the matching `configuration.yaml` | app `dev.drivelog.ha` |
 | `headunit/` | DrivelogBridge, the iDrive plugin inside the head unit (C++) | – |
 
 Versions: AGP 8.7.3, Kotlin 1.9.25, Gradle 8.9. Bump them if Android Studio asks.

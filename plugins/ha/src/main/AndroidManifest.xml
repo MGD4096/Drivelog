@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Home Assistant is reached over the network (on the home network often as plain http, hence cleartext). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Drivelog sends its state only to apps holding this permission, which only apps signed like Drivelog can. -->
+    <uses-permission android:name="dev.drivelog.permission.CAR_PLUGIN" />
+
+    <queries>
+        <package android:name="dev.drivelog" />
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:label="@string/app_name"
+        android:icon="@android:drawable/ic_menu_share"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
+        android:theme="@android:style/Theme.Material.Light.DarkActionBar">
+
+        <!-- No launcher icon: Drivelog opens it (Settings → Plugins); only apps signed like this one may. -->
+        <activity
+            android:name=".InfoActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"
+            android:permission="dev.drivelog.permission.CAR_PLUGIN">
+            <intent-filter>
+                <action android:name="dev.drivelog.CAR_PLUGIN_SETTINGS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Drivelog's vehicle state (CarPluginContract.ACTION_EXPORT); only Drivelog can send to it. -->
+        <receiver
+            android:name=".ExportReceiver"
+            android:exported="true"
+            android:permission="dev.drivelog.permission.CAR_PLUGIN">
+            <intent-filter>
+                <action android:name="dev.drivelog.EXPORT" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

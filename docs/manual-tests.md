@@ -106,6 +106,18 @@ Legend: **[phone]** needs only the phone, **[car]** needs the car (or its head u
       off, nothing opens.
 - [ ] [phone] Opening another app with the screen reader on: nothing is read (only the motorcycle app is).
 
+## 7b. Plugins and Home Assistant
+
+- [ ] [phone] Settings → Plugins lists Drivelog ID6, Drivelog Ride and Drivelog Home Assistant: installed ones with their
+      version and "Open", missing ones with "Download" (the APK from the latest GitHub release; Android installs it).
+- [ ] [phone] Drivelog Home Assistant: enter the address and save; open Drivelog: within a minute "Sent …". In Home
+      Assistant, paste the YAML, restart: the sensors per vehicle appear (odometer, fuel, range, battery, doors, parked
+      on the map, days to each service).
+- [ ] [phone] Turning "where each vehicle is parked" off: the next send has no coordinates.
+- [ ] [phone] "Send now" right after installing (before any change in Drivelog): within seconds "Sent …"; again with
+      nothing changed: sent again.
+- [ ] [phone] A wrong address: the plugin shows the error; Drivelog goes on as before.
+
 ## 8. Head unit
 
 - [ ] [car] EntryNav2: install `dist/drivelog-bridge-entrynav2.tar` (headunit/README.md); after the restart the plugin's

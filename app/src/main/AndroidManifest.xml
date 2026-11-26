@@ -14,6 +14,17 @@
         <intent>
             <action android:name="dev.drivelog.CAR_PLUGIN_SETTINGS" />
         </intent>
+        <!-- export plugins (CarPluginContract.ACTION_EXPORT), and the known plugins on the Plugins card -->
+        <intent>
+            <action android:name="dev.drivelog.EXPORT" />
+        </intent>
+        <package android:name="dev.drivelog.id6" />
+        <package android:name="dev.drivelog.ride" />
+        <package android:name="dev.drivelog.ha" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
     </queries>
 
     <!-- Reading the list of paired devices, and to be told when the car connects (API 30 and older). -->
@@ -167,6 +178,17 @@
             android:permission="dev.drivelog.permission.CAR_PLUGIN">
             <intent-filter>
                 <action android:name="dev.drivelog.CAR_READING" />
+            </intent-filter>
+        </receiver>
+
+        <!-- An export plugin's "Send now" (CarPluginContract.ACTION_EXPORT_REQUEST); only apps holding the plugin
+             permission (signed like Drivelog) can send to it. -->
+        <receiver
+            android:name=".plugin.ExportRequestReceiver"
+            android:exported="true"
+            android:permission="dev.drivelog.permission.CAR_PLUGIN">
+            <intent-filter>
+                <action android:name="dev.drivelog.EXPORT_REQUEST" />
             </intent-filter>
         </receiver>
 

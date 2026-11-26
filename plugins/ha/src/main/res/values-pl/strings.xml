@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="info_text">Wysyła stan Twoich pojazdów z Drivelog do Twojego Home Assistant: ostatnie wartości, miejsce parkowania i nadchodzące serwisy. Drivelog wysyła go przy każdej zmianie, najwyżej raz na minutę, i tylko pod adres poniżej.\n\nW Home Assistant wklej poniższą konfigurację do configuration.yaml i uruchom go ponownie: sensory pojawią się same.</string>
+    <string name="url_label">Adres Home Assistant</string>
+    <string name="webhook_label">Id webhooka (trudny do odgadnięcia: kto go zna, może na niego wysyłać)</string>
+    <string name="send_label">Co wysyłać</string>
+    <string name="send_values">Wartości: przebieg, paliwo, zasięg, akumulator 12 V, drzwi, opony</string>
+    <string name="send_parking">Gdzie stoi każdy pojazd (jego położenie)</string>
+    <string name="send_services">Nadchodzące serwisy</string>
+    <string name="save">Zapisz</string>
+    <string name="saved">Zapisano.</string>
+    <string name="send_now">Wyślij teraz</string>
+    <string name="sending">Wysyłanie…</string>
+    <string name="yaml_label">Dla Home Assistant (configuration.yaml)</string>
+    <string name="copy_yaml">Kopiuj</string>
+    <string name="copied">Skopiowano.</string>
+    <string name="no_url">Najpierw wpisz adres Home Assistant.</string>
+    <string name="no_state">Jeszcze nic z Drivelog: użyj „Wyślij teraz” albo poczekaj na następną zmianę (przejazd, odczyt, wpis serwisowy).</string>
+    <string name="not_sent">Jeszcze nie wysłano.</string>
+    <string name="sent_ok">Wysłano %1$s.</string>
+    <string name="sent_error">Nie udało się wysłać (%1$s): %2$s</string>
+</resources>
