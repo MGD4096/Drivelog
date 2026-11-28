@@ -6,6 +6,35 @@ plugin**: a separate app on the phone. The first one is **Drivelog ID6**, for BM
 **EntryNav2** (EntryEvo) head unit. A car without a plugin works too (odometer typed in by hand). Weather, news, fuel
 prices and traffic from the car are deliberately left out.
 
+## Preview
+
+<table>
+  <tr>
+    <td><img src="docs/images/cars.png" width="240" alt="Cars tab: weather, a car with odometer, fuel, open window, service gauges and where it is parked"></td>
+    <td><img src="docs/images/car-page.png" width="240" alt="A car's page: odometer, fuel, the car from above with the open window, 12 V battery and tyres, trips"></td>
+    <td><img src="docs/images/car-log.png" width="240" alt="A car's page further down: refuellings, where it is parked, the next oil change"></td>
+  </tr>
+  <tr>
+    <td align="center">Cars</td>
+    <td align="center">A car's page</td>
+    <td align="center">Fuel log, parking, reminders</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/trips.png" width="240" alt="Trips tab: totals and the trips of the month with their routes and mileage-log details"></td>
+    <td><img src="docs/images/trip-map.png" width="240" alt="A trip's route on the map, coloured by speed"></td>
+    <td><img src="docs/images/widgets.png" width="240" alt="Home screen widgets: two vehicles side by side, and the last trip on a small map"></td>
+  </tr>
+  <tr>
+    <td align="center">Trips</td>
+    <td align="center">A trip on the map</td>
+    <td align="center">Home-screen widgets</td>
+  </tr>
+</table>
+
+Made-up data on an emulator (no real vehicle, place or person): `core/src/test/kotlin/dev/drivelog/core/DemoData.kt`
+writes it (`DRIVELOG_DEMO_OUT=<folder> gradlew :core:test --tests dev.drivelog.core.DemoData`); its files go into the
+app's own folder and its vehicles into the `settings` preferences. Maps © OpenStreetMap contributors.
+
 ## How it works
 
 ```
