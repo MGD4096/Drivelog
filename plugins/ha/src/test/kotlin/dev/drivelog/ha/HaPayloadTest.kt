@@ -45,3 +45,15 @@ class HaPayloadTest {
         assertTrue(HaYaml.of("drivelog_x1", emptyList(), HaChoice()).contains("No vehicle yet"))
     }
 }
+
+class HaAddressTest {
+    @Test
+    fun homeAddressesKeepTheWebhookLocal() {
+        for (u in listOf("http://192.168.1.10:8123", "http://homeassistant.local:8123", "http://10.0.0.5:8123/", "http://172.20.1.2:8123", "http://homeassistant:8123"))
+            assertTrue(u, HaYaml.isLocal(u))
+        for (u in listOf("https://abcdef.ui.nabu.casa", "https://ha.example.com", "http://8.8.8.8:8123", "http://172.32.0.1"))
+            assertFalse(u, HaYaml.isLocal(u))
+        assertTrue(HaYaml.of("w", emptyList(), HaChoice(), local = false).contains("local_only: false"))
+        assertTrue(HaYaml.of("w", emptyList(), HaChoice()).contains("platform: webhook"))
+    }
+}

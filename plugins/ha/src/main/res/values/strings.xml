@@ -19,5 +19,8 @@
     <string name="no_state">Nothing from Drivelog yet: use "Send now", or it comes with the next change (a trip, a reading, a service entry).</string>
     <string name="not_sent">Not sent yet.</string>
     <string name="sent_ok">Sent %1$s.</string>
+    <string name="sent_vehicles">Vehicles in it: %1$d.</string>
+    <string name="ok_note">Home Assistant answers OK even when it drops the data (another webhook id, a local-only webhook reached from outside): if the sensors stay empty, see Settings → System → Logs in Home Assistant.</string>
+    <string name="show_sent">What was sent</string>
     <string name="sent_error">Could not send (%1$s): %2$s</string>
 </resources>

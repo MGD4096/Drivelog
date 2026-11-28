@@ -74,6 +74,18 @@ class InfoActivity : Activity() {
         column.addView(buttons)
         status = TextView(this).apply { textSize = 14f; setPadding(0, pad / 2, 0, pad) }
         column.addView(status)
+        column.addView(Button(this).apply {
+            setText(R.string.show_sent)
+            setOnClickListener {
+                val body = settings.sentBody
+                android.app.AlertDialog.Builder(this@InfoActivity)
+                    .setTitle(R.string.show_sent)
+                    .setMessage(body ?: getString(R.string.not_sent))
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show()
+                    .findViewById<TextView>(android.R.id.message)?.apply { setTextIsSelectable(true); textSize = 11f; typeface = android.graphics.Typeface.MONOSPACE }
+            }
+        })
         column.addView(label(R.string.yaml_label))
         column.addView(Button(this).apply {
             setText(R.string.copy_yaml)
@@ -122,10 +134,11 @@ class InfoActivity : Activity() {
         status.text = when {
             settings.state == null -> getString(R.string.no_state)
             at == 0L -> getString(R.string.not_sent)
-            settings.lastError.isEmpty() -> getString(R.string.sent_ok, DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(at)))
+            settings.lastError.isEmpty() -> getString(R.string.sent_ok, DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(at))) +
+                " " + getString(R.string.sent_vehicles, HaPayload.vehicles(settings.sentBody).size) + "\n" + getString(R.string.ok_note)
             else -> getString(R.string.sent_error, DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(at)), settings.lastError)
         }
-        yaml.text = HaYaml.of(settings.webhookId, HaPayload.vehicles(settings.state), settings.choice)
+        yaml.text = HaYaml.of(settings.webhookId, HaPayload.vehicles(settings.state), settings.choice, settings.baseUrl.isEmpty() || HaYaml.isLocal(settings.baseUrl))
     }
 
     private companion object {

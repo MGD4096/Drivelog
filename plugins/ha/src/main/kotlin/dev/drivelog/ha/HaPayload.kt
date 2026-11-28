@@ -49,14 +49,27 @@ object HaPayload {
 object HaYaml {
     private val SERVICES = listOf("inspection" to "inspection", "insurance" to "insurance", "oil_change" to "oil change")
 
-    fun of(webhookId: String, vehicles: List<Pair<String, String>>, choice: HaChoice): String = buildString {
+    /**
+     * Whether [url] is on the home network (a private address, `….local`, `localhost`): then the webhook may stay
+     * `local_only`. Home Assistant drops requests from outside to a local-only webhook while still answering OK.
+     */
+    fun isLocal(url: String): Boolean {
+        val host = url.substringAfter("://").substringBefore('/').substringBefore(':').lowercase()
+        if (host.endsWith(".local") || host == "localhost" || host == "homeassistant") return true
+        val parts = host.split('.').mapNotNull { it.toIntOrNull() }
+        if (parts.size != 4) return false
+        return parts[0] == 10 || parts[0] == 127 || (parts[0] == 192 && parts[1] == 168) || (parts[0] == 172 && parts[1] in 16..31)
+    }
+
+    fun of(webhookId: String, vehicles: List<Pair<String, String>>, choice: HaChoice, local: Boolean = true): String = buildString {
         append("# Drivelog → Home Assistant: add to configuration.yaml, then restart Home Assistant.\n")
         append("template:\n")
         append("  - trigger:\n")
-        append("      - trigger: webhook\n")
+        append("      - platform: webhook   # every Home Assistant version takes this (newer ones also trigger: webhook)\n")
         append("        webhook_id: ").append(webhookId).append('\n')
         append("        allowed_methods: [POST]\n")
-        append("        local_only: true   # false if Drivelog reaches Home Assistant from outside your network\n")
+        if (local) append("        local_only: true   # the address is on the home network\n")
+        else append("        local_only: false  # the address is outside the home network: the webhook must take requests from there\n")
         if (vehicles.isEmpty()) {
             append("    # No vehicle yet: the sensors appear here once Drivelog has sent its first state.\n")
             return@buildString
@@ -89,7 +102,7 @@ object HaYaml {
             }
             if (choice.parking) {
                 sensor("parked", "parked", listOf("device_class: timestamp"),
-                    "\"{% set p = $v.get('parked') %}{{ (p.atMs / 1000) | timestamp_utc if p and p.atMs else this.state }}\"",
+                    "\"{% set p = $v.get('parked') %}{{ (p.atMs / 1000) | as_datetime if p and p.atMs else this.state }}\"",
                     listOf(
                         "latitude: \"{{ $v.get('parked', {}).get('lat', this.attributes.latitude | default(none)) }}\"",
                         "longitude: \"{{ $v.get('parked', {}).get('lon', this.attributes.longitude | default(none)) }}\"",

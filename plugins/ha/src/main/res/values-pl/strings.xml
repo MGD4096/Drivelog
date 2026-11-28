@@ -18,5 +18,8 @@
     <string name="no_state">Jeszcze nic z Drivelog: użyj „Wyślij teraz” albo poczekaj na następną zmianę (przejazd, odczyt, wpis serwisowy).</string>
     <string name="not_sent">Jeszcze nie wysłano.</string>
     <string name="sent_ok">Wysłano %1$s.</string>
+    <string name="sent_vehicles">Pojazdów: %1$d.</string>
+    <string name="ok_note">Home Assistant odpowiada „OK” nawet wtedy, gdy odrzuci dane (inne id webhooka, webhook tylko lokalny, a wysłano spoza sieci): jeśli sensory są puste, zajrzyj w Home Assistant do Ustawienia → System → Dzienniki.</string>
+    <string name="show_sent">Co wysłano</string>
     <string name="sent_error">Nie udało się wysłać (%1$s): %2$s</string>
 </resources>
